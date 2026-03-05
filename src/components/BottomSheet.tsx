@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
+  Animated,
   Dimensions,
+  Easing,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -29,14 +31,28 @@ export default function BottomSheet({
   description,
   children,
 }: BottomSheetProps) {
+  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+
+  useEffect(() => {
+    if (visible) {
+      translateY.setValue(SCREEN_HEIGHT);
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 300,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible]);
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.overlay}
       >
         <Pressable style={styles.backdrop} onPress={onClose} />
-        <View style={styles.sheet}>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
           <View style={styles.handleBar}>
             <View style={styles.handle} />
           </View>
@@ -47,7 +63,7 @@ export default function BottomSheet({
             </View>
           )}
           <View style={styles.content}>{children}</View>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );

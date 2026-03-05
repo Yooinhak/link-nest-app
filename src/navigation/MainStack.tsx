@@ -20,11 +20,17 @@ export default function MainStack() {
         headerBackTitle: '',
       }}
     >
-      <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />
+      <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false, title: '' }} />
       <Stack.Screen
         name="FolderDetail"
         component={FolderDetailScreen}
-        options={({ route }) => ({ title: route.params.folderName || '폴더' })}
+        options={({ route }) => ({
+          title: route.params.folderName || '폴더',
+          headerStyle: { backgroundColor: colors.white },
+          headerShadowVisible: false,
+          headerLargeTitle: false,
+          headerBackTitleVisible: false,
+        })}
       />
     </Stack.Navigator>
   );

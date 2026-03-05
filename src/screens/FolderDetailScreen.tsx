@@ -57,7 +57,10 @@ export default function FolderDetailScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.countRow}>
-        <Text style={styles.countText}>{count}개의 링크</Text>
+        <View style={styles.countBadge}>
+          <Text style={styles.countNumber}>{count}</Text>
+        </View>
+        <Text style={styles.countText}>개의 링크</Text>
       </View>
 
       {isLoading ? (
@@ -108,8 +111,32 @@ export default function FolderDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  countRow: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
-  countText: { fontSize: 14, color: colors.gray[500], fontWeight: '500' },
+  countRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
+    backgroundColor: colors.white,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.gray[200],
+    gap: 4,
+  },
+  countBadge: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    minWidth: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  countNumber: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  countText: { fontSize: 14, color: colors.gray[600], fontWeight: '600' },
   list: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 100 },
   form: { gap: 16 },
   sheetBtns: { flexDirection: 'row', gap: 10, marginTop: 20, marginBottom: 8 },
