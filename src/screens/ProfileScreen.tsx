@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useQuery } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
+import AlertDialog from '../components/AlertDialog';
 import Skeleton from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import { colors } from '../constants/theme';
 import { queryKeys } from '../utils/react-query/queryKeys';
 import { supabase } from '../utils/supabase/client';
@@ -26,6 +28,8 @@ const ChevronRight = () => (
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const { showToast } = useToast();
+  const [logoutVisible, setLogoutVisible] = useState(false);
 
   const { data: user, isLoading } = useQuery({
     queryKey: [queryKeys.USER_PROFILE],
@@ -34,7 +38,10 @@ export default function ProfileScreen() {
   });
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      showToast('error', '로그아웃에 실패했어요');
+    }
   };
 
   return (
@@ -68,7 +75,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <TouchableOpacity style={styles.menuRow} onPress={handleSignOut} activeOpacity={0.5}>
+        <TouchableOpacity style={styles.menuRow} onPress={() => setLogoutVisible(true)} activeOpacity={0.5}>
           <LogoutIcon />
           <Text style={[styles.menuLabel, { color: colors.destructive }]}>로그아웃</Text>
           <ChevronRight />
@@ -78,6 +85,16 @@ export default function ProfileScreen() {
       <View style={styles.footer}>
         <Text style={styles.footerText}>Link Nest v1.0.0</Text>
       </View>
+
+      <AlertDialog
+        visible={logoutVisible}
+        onClose={() => setLogoutVisible(false)}
+        title="로그아웃 할까요?"
+        description="다시 로그인하면 데이터는 그대로 유지돼요"
+        confirmText="로그아웃"
+        onConfirm={handleSignOut}
+        destructive
+      />
     </View>
   );
 }

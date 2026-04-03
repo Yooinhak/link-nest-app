@@ -4,11 +4,20 @@ export interface Metadata {
   image: string | null;
 }
 
+const FETCH_TIMEOUT = 5000;
+
+function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+}
+
 export async function parseMetadata(url: string): Promise<Metadata> {
   // 1차: Microlink API (기존 Next.js 앱과 동일한 소스)
   try {
     const apiUrl = `https://api.microlink.io?url=${encodeURIComponent(url)}`;
-    const response = await fetch(apiUrl);
+    const response = await fetchWithTimeout(apiUrl);
     const json = await response.json();
 
     if (json.status === 'success' && json.data) {
@@ -24,7 +33,7 @@ export async function parseMetadata(url: string): Promise<Metadata> {
 
   // 2차: 직접 HTML 파싱 (fallback)
   try {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
