@@ -12,6 +12,9 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import { ToastProvider } from './src/components/Toast';
 import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/utils/react-query/queryClient';
+import { initSentry } from './src/utils/sentry';
+
+initSentry();
 
 export default function App() {
   return (

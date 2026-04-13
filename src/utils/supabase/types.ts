@@ -30,18 +30,21 @@ export type Database = {
     Tables: {
       folders: {
         Row: {
+          color: string | null;
           created_at: string | null;
           id: number;
           name: string;
           user_id: string;
         };
         Insert: {
+          color?: string | null;
           created_at?: string | null;
           id?: never;
           name: string;
           user_id?: string;
         };
         Update: {
+          color?: string | null;
           created_at?: string | null;
           id?: never;
           name?: string;

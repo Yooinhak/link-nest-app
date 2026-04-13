@@ -104,7 +104,41 @@ export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  useShareIntent(showToast);
+  const { pendingUrl, clearPendingUrl } = useShareIntent();
+  const [shareSheetVisible, setShareSheetVisible] = useState(false);
+  const [savingShare, setSavingShare] = useState(false);
+
+  // 공유 인텐트로 URL이 들어오면 폴더 선택 BottomSheet를 연다
+  React.useEffect(() => {
+    if (pendingUrl) {
+      setShareSheetVisible(true);
+    }
+  }, [pendingUrl]);
+
+  const handleSaveSharedUrl = async (folderId: number) => {
+    if (!pendingUrl) return;
+    setSavingShare(true);
+    const { error } = await supabase.from('posts').insert({
+      url: pendingUrl,
+      description: null,
+      folder_id: folderId,
+    });
+    setSavingShare(false);
+
+    if (error) {
+      showToast('error', '링크 저장에 실패했어요');
+    } else {
+      queryClient.invalidateQueries({ queryKey: [queryKeys.FOLDER_LIST] });
+      showToast('success', '공유된 링크가 저장되었어요');
+    }
+    clearPendingUrl();
+    setShareSheetVisible(false);
+  };
+
+  const handleCancelShare = () => {
+    clearPendingUrl();
+    setShareSheetVisible(false);
+  };
 
   const [createVisible, setCreateVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
@@ -118,7 +152,7 @@ export default function HomeScreen() {
 
   const { data: folderList, refetch, isRefetching } = useQuery({
     queryKey: [queryKeys.FOLDER_LIST],
-    queryFn: async () => await supabase.from('folders').select('*, posts(count)'),
+    queryFn: async () => await supabase.from('folders').select('*, posts(count)').order('created_at', { ascending: false }),
     select: (data) => data.data,
   });
 
@@ -273,6 +307,50 @@ export default function HomeScreen() {
       </BottomSheet>
 
       <AlertDialog visible={deleteVisible} onClose={() => setDeleteVisible(false)} title="폴더를 삭제할까요?" description="폴더 안의 모든 링크도 함께 삭제돼요" confirmText="삭제" onConfirm={handleDelete} destructive />
+
+      {/* 공유 인텐트: 폴더 선택 */}
+      <BottomSheet
+        visible={shareSheetVisible}
+        onClose={handleCancelShare}
+        title="어느 폴더에 저장할까요?"
+        description={pendingUrl ? `공유된 링크: ${pendingUrl}` : undefined}
+      >
+        {folderList && folderList.length > 0 ? (
+          <View style={styles.shareFolderList}>
+            {folderList.map((folder) => {
+              const fc = getFolderColor(folder.color);
+              return (
+                <TouchableOpacity
+                  key={folder.id}
+                  style={styles.shareFolderRow}
+                  onPress={() => handleSaveSharedUrl(folder.id)}
+                  activeOpacity={0.6}
+                  disabled={savingShare}
+                >
+                  <View style={[styles.folderIconWrap, { backgroundColor: fc.light }]}>
+                    <FolderIcon color={fc.main} />
+                  </View>
+                  <Text style={styles.folderName} numberOfLines={1}>{folder.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={styles.shareEmpty}>
+            <Text style={styles.shareEmptyText}>폴더가 없어요. 먼저 폴더를 만들어주세요.</Text>
+            <Button
+              onPress={() => {
+                handleCancelShare();
+                setFolderName('');
+                setFolderColor('blue');
+                setCreateVisible(true);
+              }}
+            >
+              폴더 만들기
+            </Button>
+          </View>
+        )}
+      </BottomSheet>
     </View>
   );
 }
@@ -301,4 +379,8 @@ const styles = StyleSheet.create({
   moreBtn: { padding: 6 },
   moreDots: { fontSize: 18, color: colors.gray[400], fontWeight: '700' },
   sheetBtns: { flexDirection: 'row', gap: 10, marginTop: 20, marginBottom: 8 },
+  shareFolderList: { gap: 4, paddingBottom: 8, maxHeight: 320 },
+  shareFolderRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 4, borderRadius: 12, gap: 14 },
+  shareEmpty: { alignItems: 'center', gap: 16, paddingVertical: 20 },
+  shareEmptyText: { fontSize: 15, color: colors.gray[500] },
 });

@@ -11,5 +11,9 @@
       "@constants/*": ["src/constants/*"],
       "@navigation/*": ["src/navigation/*"]
     }
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "supabase/functions/**/*"
+  ]
 }

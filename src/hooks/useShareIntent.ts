@@ -1,19 +1,26 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useShareIntentContext } from 'expo-share-intent';
-import { useQueryClient } from '@tanstack/react-query';
 
-import { queryKeys } from '../utils/react-query/queryKeys';
-import { supabase } from '../utils/supabase/client';
 import { isValidUrl } from '../utils/validateUrl';
 
 /**
- * 외부 앱에서 공유받은 URL을 처리합니다.
- * 기본 폴더(가장 최근 폴더)에 자동 저장하고 토스트로 알립니다.
+ * 외부 앱에서 공유받은 URL을 추출하여 반환합니다.
+ *
+ * 이전 버전은 자동으로 "가장 최근 폴더"에 저장했지만, 사용자가 폴더를 선택할
+ * 기회가 없어 의도와 다른 폴더에 쌓이는 문제가 있었습니다 (A-12).
+ *
+ * 이제는 URL만 추출하여 `pendingUrl` 로 반환하고, 저장 로직은 호출하는 쪽
+ * (HomeScreen)에서 폴더 선택 BottomSheet를 통해 처리합니다.
+ *
+ * 사용법:
+ *   const { pendingUrl, clearPendingUrl } = useShareIntent();
+ *   // pendingUrl이 있으면 → 폴더 선택 BottomSheet 오픈
+ *   // 저장 완료 또는 취소 시 → clearPendingUrl() 호출
  */
-export function useShareIntent(showToast: (type: 'success' | 'error', msg: string) => void) {
+export function useShareIntent() {
   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentContext();
-  const queryClient = useQueryClient();
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hasShareIntent || !shareIntent) return;
@@ -25,34 +32,11 @@ export function useShareIntent(showToast: (type: 'success' | 'error', msg: strin
       return;
     }
 
-    (async () => {
-      // 가장 최근 폴더 가져오기
-      const { data: folders } = await supabase
-        .from('folders')
-        .select('id')
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (!folders || folders.length === 0) {
-        showToast('error', '폴더를 먼저 만들어주세요');
-        resetShareIntent();
-        return;
-      }
-
-      const { error } = await supabase.from('posts').insert({
-        url,
-        description: null,
-        folder_id: folders[0].id,
-      });
-
-      if (error) {
-        showToast('error', '링크 저장에 실패했어요');
-      } else {
-        queryClient.invalidateQueries({ queryKey: [queryKeys.FOLDER_LIST] });
-        showToast('success', '공유된 링크가 저장되었어요');
-      }
-
-      resetShareIntent();
-    })();
+    setPendingUrl(url);
+    resetShareIntent();
   }, [hasShareIntent]);
+
+  const clearPendingUrl = () => setPendingUrl(null);
+
+  return { pendingUrl, clearPendingUrl };
 }
