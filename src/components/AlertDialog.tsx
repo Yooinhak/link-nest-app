@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { colors } from '../constants/theme';
@@ -26,14 +27,14 @@ export default function AlertDialog({
 }: AlertDialogProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <View style={styles.dialog} onStartShouldSetResponder={() => true}>
+      <Pressable style={styles.overlay} onPress={onClose} accessibilityRole="button" accessibilityLabel="닫기">
+        <View style={styles.dialog} onStartShouldSetResponder={() => true} accessibilityRole="alert">
           <View style={styles.header}>
-            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.title} accessibilityRole="header">{title}</Text>
             {description && <Text style={styles.description}>{description}</Text>}
           </View>
           <View style={styles.footer}>
-            <TouchableOpacity style={[styles.button]} onPress={onClose} activeOpacity={0.6}>
+            <TouchableOpacity style={[styles.button]} onPress={onClose} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel={cancelText}>
               <Text style={styles.cancelText}>{cancelText}</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -43,6 +44,8 @@ export default function AlertDialog({
                 onClose();
               }}
               activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel={confirmText}
             >
               <Text style={[styles.confirmText, destructive && styles.destructiveText]}>
                 {confirmText}

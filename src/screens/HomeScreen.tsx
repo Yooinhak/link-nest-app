@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
+
 import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -11,15 +11,20 @@ import AlertDialog from '../components/AlertDialog';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import ContextMenu, { ContextMenuItem } from '../components/ContextMenu';
-import Input from '../components/Input';
 import EmptyState from '../components/EmptyState';
+import Input from '../components/Input';
 import { useToast } from '../components/Toast';
 import { colors } from '../constants/theme';
-import { lightTap } from '../utils/haptics';
+import {
+  useCreateFolder,
+  useCreatePost,
+  useDeferredDeleteFolder,
+  useFoldersQuery,
+  useUpdateFolder,
+} from '../hooks/queries';
 import { useShareIntent } from '../hooks/useShareIntent';
 import { MainStackParamList } from '../navigation/types';
-import { queryKeys } from '../utils/react-query/queryKeys';
-import { supabase } from '../utils/supabase/client';
+import { lightTap } from '../utils/haptics';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'MainTabs'>;
 
@@ -86,6 +91,9 @@ function ColorPicker({ selected, onSelect }: { selected: FolderColorKey; onSelec
             style={[pickerStyles.swatch, { backgroundColor: c.main }, selected === c.key && pickerStyles.swatchSelected]}
             onPress={() => { lightTap(); onSelect(c.key); }}
             activeOpacity={0.6}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: selected === c.key }}
+            accessibilityLabel={`${c.key === 'blue' ? '파랑' : c.key === 'purple' ? '보라' : c.key === 'pink' ? '분홍' : c.key === 'orange' ? '주황' : c.key === 'green' ? '초록' : '회색'} 색상`}
           >
             {selected === c.key && (
               <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
@@ -99,14 +107,78 @@ function ColorPicker({ selected, onSelect }: { selected: FolderColorKey; onSelec
   );
 }
 
+// B-5: FlatList 성능 최적화 — 외부 컴포넌트 + React.memo.
+// 부모 리렌더 시에도 props가 같은 Row는 리렌더되지 않는다.
+// 콜백은 부모에서 useCallback으로 안정화해 전달.
+type FolderItem = {
+  id: number;
+  name: string;
+  color: string | null;
+  posts?: Array<{ count: number }>;
+};
+
+type FolderRowProps = {
+  item: FolderItem;
+  postCount: number;
+  onOpen: (id: number, name: string) => void;
+  onEdit: (id: number, name: string, color: FolderColorKey) => void;
+  onDelete: (id: number) => void;
+};
+
+const FolderRow = React.memo(function FolderRow({ item, postCount, onOpen, onEdit, onDelete }: FolderRowProps) {
+  const fc = getFolderColor(item.color);
+  const menuItems: ContextMenuItem[] = [
+    {
+      label: '이름 변경',
+      icon: <PenIcon />,
+      onPress: () => onEdit(item.id, item.name, (item.color ?? 'blue') as FolderColorKey),
+    },
+    {
+      label: '삭제',
+      icon: <TrashIcon />,
+      destructive: true,
+      onPress: () => onDelete(item.id),
+    },
+  ];
+
+  return (
+    <TouchableOpacity
+      style={styles.folderRow}
+      onPress={() => onOpen(item.id, item.name)}
+      activeOpacity={0.5}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.name} 폴더, ${postCount}개의 링크`}
+    >
+      <View style={[styles.folderIconWrap, { backgroundColor: fc.light }]}>
+        <FolderIcon color={fc.main} />
+      </View>
+      <View style={styles.folderInfo}>
+        <Text style={styles.folderName} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.folderCount}>{postCount}개의 링크</Text>
+      </View>
+      <View style={styles.folderRight}>
+        <ContextMenu
+          items={menuItems}
+          trigger={<View style={styles.moreBtn}><Text style={styles.moreDots}>···</Text></View>}
+        />
+        <ChevronRight />
+      </View>
+    </TouchableOpacity>
+  );
+});
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
-  const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { pendingUrl, clearPendingUrl } = useShareIntent();
   const [shareSheetVisible, setShareSheetVisible] = useState(false);
-  const [savingShare, setSavingShare] = useState(false);
+
+  const { data: folderList, refetch, isRefetching } = useFoldersQuery();
+  const createFolder = useCreateFolder();
+  const updateFolder = useUpdateFolder();
+  const deferredDelete = useDeferredDeleteFolder();
+  const createPost = useCreatePost();
 
   // 공유 인텐트로 URL이 들어오면 폴더 선택 BottomSheet를 연다
   React.useEffect(() => {
@@ -115,24 +187,17 @@ export default function HomeScreen() {
     }
   }, [pendingUrl]);
 
-  const handleSaveSharedUrl = async (folderId: number) => {
+  const handleSaveSharedUrl = (folderId: number) => {
     if (!pendingUrl) return;
-    setSavingShare(true);
-    const { error } = await supabase.from('posts').insert({
-      url: pendingUrl,
-      description: null,
-      folder_id: folderId,
-    });
-    setSavingShare(false);
-
-    if (error) {
-      showToast('error', '링크 저장에 실패했어요');
-    } else {
-      queryClient.invalidateQueries({ queryKey: [queryKeys.FOLDER_LIST] });
-      showToast('success', '공유된 링크가 저장되었어요');
-    }
-    clearPendingUrl();
-    setShareSheetVisible(false);
+    createPost.mutate(
+      { url: pendingUrl, description: null, folder_id: folderId },
+      {
+        onSettled: () => {
+          clearPendingUrl();
+          setShareSheetVisible(false);
+        },
+      },
+    );
   };
 
   const handleCancelShare = () => {
@@ -147,72 +212,40 @@ export default function HomeScreen() {
   const [folderColor, setFolderColor] = useState<FolderColorKey>('blue');
   const [editTarget, setEditTarget] = useState<{ id: number; name: string; color: FolderColorKey } | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [updating, setUpdating] = useState(false);
 
-  const { data: folderList, refetch, isRefetching } = useQuery({
-    queryKey: [queryKeys.FOLDER_LIST],
-    queryFn: async () => await supabase.from('folders').select('*, posts(count)').order('created_at', { ascending: false }),
-    select: (data) => data.data,
-  });
-
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!folderName.trim()) {
       showToast('error', '폴더 이름을 입력해주세요');
       return;
     }
-    setCreating(true);
-    const { error } = await supabase.from('folders').insert({ name: folderName.trim(), color: folderColor });
-    setCreating(false);
-
-    if (error) {
-      showToast('error', '폴더 생성에 실패했어요');
-    } else {
-      queryClient.invalidateQueries({ queryKey: [queryKeys.FOLDER_LIST] });
-      showToast('success', '폴더가 생성되었어요');
-      setFolderName('');
-      setFolderColor('blue');
-      setCreateVisible(false);
-    }
+    createFolder.mutate(
+      { name: folderName.trim(), color: folderColor },
+      {
+        onSuccess: () => {
+          setFolderName('');
+          setFolderColor('blue');
+          setCreateVisible(false);
+        },
+      },
+    );
   };
 
-  const handleUpdate = async () => {
+  const handleUpdate = () => {
     if (!editTarget?.name.trim()) {
       showToast('error', '폴더 이름을 입력해주세요');
       return;
     }
-    setUpdating(true);
-    const { error } = await supabase.from('folders').update({ name: editTarget.name.trim(), color: editTarget.color }).eq('id', editTarget.id);
-    setUpdating(false);
-
-    if (error) {
-      showToast('error', '수정에 실패했어요');
-    } else {
-      queryClient.invalidateQueries({ queryKey: [queryKeys.FOLDER_LIST] });
-      showToast('success', '폴더가 수정되었어요');
-      setEditVisible(false);
-    }
+    updateFolder.mutate(
+      { id: editTarget.id, name: editTarget.name.trim(), color: editTarget.color },
+      {
+        onSuccess: () => setEditVisible(false),
+      },
+    );
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!deleteTargetId) return;
-
-    // Optimistic Update: 즉시 UI에서 제거
-    const previousFolders = queryClient.getQueryData([queryKeys.FOLDER_LIST]);
-    queryClient.setQueryData([queryKeys.FOLDER_LIST], (old: any) => {
-      if (!old?.data) return old;
-      return { ...old, data: old.data.filter((f: any) => f.id !== deleteTargetId) };
-    });
-
-    const { error } = await supabase.from('folders').delete().eq('id', deleteTargetId);
-    if (error) {
-      // 실패 시 롤백
-      queryClient.setQueryData([queryKeys.FOLDER_LIST], previousFolders);
-      showToast('error', '폴더 삭제에 실패했어요');
-    } else {
-      queryClient.invalidateQueries({ queryKey: [queryKeys.FOLDER_LIST] });
-      showToast('success', '폴더가 삭제되었어요');
-    }
+    deferredDelete.execute(deleteTargetId);
   };
 
   const getPostCount = (folder: any): number => {
@@ -222,62 +255,56 @@ export default function HomeScreen() {
     return 0;
   };
 
-  const renderItem = ({ item }: { item: any }) => {
-    const postCount = getPostCount(item);
-    const fc = getFolderColor(item.color);
-    const menuItems: ContextMenuItem[] = [
-      {
-        label: '이름 변경',
-        icon: <PenIcon />,
-        onPress: () => { setEditTarget({ id: item.id, name: item.name, color: item.color ?? 'blue' }); setEditVisible(true); },
-      },
-      {
-        label: '삭제',
-        icon: <TrashIcon />,
-        destructive: true,
-        onPress: () => { setDeleteTargetId(item.id); setDeleteVisible(true); },
-      },
-    ];
+  // B-5: FolderRow 에 넘기는 콜백을 useCallback 으로 안정화. 참조가 바뀌지 않아야
+  // React.memo 된 FolderRow 가 리렌더되지 않는다.
+  const handleOpenFolder = useCallback((id: number, name: string) => {
+    navigation.navigate('FolderDetail', { folderId: String(id), folderName: name });
+  }, [navigation]);
 
-    return (
-      <TouchableOpacity
-        style={styles.folderRow}
-        onPress={() => navigation.navigate('FolderDetail', { folderId: String(item.id), folderName: item.name })}
-        activeOpacity={0.5}
-      >
-        <View style={[styles.folderIconWrap, { backgroundColor: fc.light }]}>
-          <FolderIcon color={fc.main} />
-        </View>
-        <View style={styles.folderInfo}>
-          <Text style={styles.folderName} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.folderCount}>{postCount}개의 링크</Text>
-        </View>
-        <View style={styles.folderRight}>
-          <ContextMenu
-            items={menuItems}
-            trigger={<View style={styles.moreBtn}><Text style={styles.moreDots}>···</Text></View>}
-          />
-          <ChevronRight />
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const handleEditFolder = useCallback((id: number, name: string, color: FolderColorKey) => {
+    setEditTarget({ id, name, color });
+    setEditVisible(true);
+  }, []);
+
+  const handleDeleteFolder = useCallback((id: number) => {
+    setDeleteTargetId(id);
+    setDeleteVisible(true);
+  }, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: FolderItem }) => (
+      <FolderRow
+        item={item}
+        postCount={getPostCount(item)}
+        onOpen={handleOpenFolder}
+        onEdit={handleEditFolder}
+        onDelete={handleDeleteFolder}
+      />
+    ),
+    [handleOpenFolder, handleEditFolder, handleDeleteFolder],
+  );
+
+  const keyExtractor = useCallback((item: FolderItem) => String(item.id), []);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>내 폴더</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => { setFolderName(''); setFolderColor('blue'); setCreateVisible(true); }} activeOpacity={0.6}>
+        <Text style={styles.headerTitle} accessibilityRole="header">내 폴더</Text>
+        <TouchableOpacity style={styles.addBtn} onPress={() => { setFolderName(''); setFolderColor('blue'); setCreateVisible(true); }} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel="새 폴더 만들기">
           <Text style={styles.addBtnText}>+ 새 폴더</Text>
         </TouchableOpacity>
       </View>
 
       <FlatList
         data={folderList ?? []}
-        keyExtractor={(item) => String(item.id)}
+        keyExtractor={keyExtractor}
         renderItem={renderItem}
         contentContainerStyle={[styles.list, { paddingBottom: 100 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={7}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
         }
@@ -292,7 +319,7 @@ export default function HomeScreen() {
         <ColorPicker selected={folderColor} onSelect={setFolderColor} />
         <View style={styles.sheetBtns}>
           <Button variant="secondary" onPress={() => setCreateVisible(false)} style={{ flex: 1 }}>닫기</Button>
-          <Button onPress={handleCreate} loading={creating} style={{ flex: 1 }}>만들기</Button>
+          <Button onPress={handleCreate} loading={createFolder.isPending} style={{ flex: 1 }}>만들기</Button>
         </View>
       </BottomSheet>
 
@@ -302,7 +329,7 @@ export default function HomeScreen() {
         <ColorPicker selected={editTarget?.color ?? 'blue'} onSelect={(c) => setEditTarget((p) => (p ? { ...p, color: c } : null))} />
         <View style={styles.sheetBtns}>
           <Button variant="secondary" onPress={() => setEditVisible(false)} style={{ flex: 1 }}>취소</Button>
-          <Button onPress={handleUpdate} loading={updating} style={{ flex: 1 }}>저장</Button>
+          <Button onPress={handleUpdate} loading={updateFolder.isPending} style={{ flex: 1 }}>저장</Button>
         </View>
       </BottomSheet>
 
@@ -325,7 +352,7 @@ export default function HomeScreen() {
                   style={styles.shareFolderRow}
                   onPress={() => handleSaveSharedUrl(folder.id)}
                   activeOpacity={0.6}
-                  disabled={savingShare}
+                  disabled={createPost.isPending}
                 >
                   <View style={[styles.folderIconWrap, { backgroundColor: fc.light }]}>
                     <FolderIcon color={fc.main} />

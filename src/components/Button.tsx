@@ -1,4 +1,5 @@
 import React from 'react';
+
 import {
   ActivityIndicator,
   StyleSheet,
@@ -46,6 +47,8 @@ export default function Button({
       ]}
       disabled={disabled || loading}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       {...props}
     >
       {loading ? (

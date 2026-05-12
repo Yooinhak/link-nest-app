@@ -1,4 +1,5 @@
 import React from "react";
+
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { NavigationContainer } from "@react-navigation/native";
@@ -7,6 +8,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { colors } from "../constants/theme";
 import { useAuth } from "../hooks/useAuth";
 import LoginScreen from "../screens/LoginScreen";
+
 import MainStack from "./MainStack";
 import { RootStackParamList } from "./types";
 

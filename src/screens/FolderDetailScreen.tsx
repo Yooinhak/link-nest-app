@@ -1,8 +1,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
+
 import { FlatList, LayoutAnimation, Platform, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, UIManager, View } from 'react-native';
 
 import { RouteProp, useRoute } from '@react-navigation/native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Svg, { Path } from 'react-native-svg';
 
 import BottomSheet from '../components/BottomSheet';
@@ -12,10 +12,9 @@ import Input from '../components/Input';
 import LinkPreviewCard, { LinkPreviewCardSkeleton, ViewMode } from '../components/LinkPreviewCard';
 import { useToast } from '../components/Toast';
 import { colors } from '../constants/theme';
-import { mediumTap } from '../utils/haptics';
+import { useCreatePost, usePostsQuery, useUpdatePost } from '../hooks/queries';
 import { MainStackParamList } from '../navigation/types';
-import { queryKeys } from '../utils/react-query/queryKeys';
-import { supabase } from '../utils/supabase/client';
+import { mediumTap } from '../utils/haptics';
 import { isValidUrl } from '../utils/validateUrl';
 
 // Android LayoutAnimation 활성화
@@ -59,13 +58,11 @@ const SortIcon = () => (
 export default function FolderDetailScreen() {
   const route = useRoute<FolderDetailRouteProp>();
   const { folderId } = route.params;
-  const queryClient = useQueryClient();
   const { showToast } = useToast();
 
   const [viewMode, setViewMode] = useState<ViewMode>('large');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
   const [createVisible, setCreateVisible] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [postUrl, setPostUrl] = useState('');
   const [postDescription, setPostDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,13 +70,10 @@ export default function FolderDetailScreen() {
   // 링크 수정 상태
   const [editVisible, setEditVisible] = useState(false);
   const [editTarget, setEditTarget] = useState<{ id: number; description: string } | null>(null);
-  const [updating, setUpdating] = useState(false);
 
-  const { data: postList, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: [queryKeys.POST_LIST, folderId],
-    queryFn: async () => await supabase.from('posts').select().eq('folder_id', Number(folderId)),
-    select: (data) => data.data,
-  });
+  const { data: postList, isLoading, refetch, isRefetching } = usePostsQuery(folderId);
+  const createPost = useCreatePost();
+  const updatePost = useUpdatePost(folderId);
 
   const filteredList = useMemo(() => {
     let list = postList ?? [];
@@ -96,13 +90,13 @@ export default function FolderDetailScreen() {
 
     // 정렬
     return [...list].sort((a, b) => {
-      const dateA = new Date(a.created_at).getTime();
-      const dateB = new Date(b.created_at).getTime();
+      const dateA = new Date(a.created_at ?? 0).getTime();
+      const dateB = new Date(b.created_at ?? 0).getTime();
       return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
     });
   }, [postList, searchQuery, sortOrder]);
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     const url = postUrl.trim();
     if (!url) {
       showToast('error', 'URL을 입력해주세요');
@@ -120,41 +114,26 @@ export default function FolderDetailScreen() {
       return;
     }
 
-    setCreating(true);
-    const { error } = await supabase.from('posts').insert({
-      url,
-      description: postDescription.trim() || null,
-      folder_id: Number(folderId),
-    });
-    setCreating(false);
-
-    if (error) {
-      showToast('error', '링크 추가에 실패했어요');
-    } else {
-      queryClient.invalidateQueries({ queryKey: [queryKeys.POST_LIST, folderId] });
-      showToast('success', '링크가 추가되었어요');
-      setPostUrl('');
-      setPostDescription('');
-      setCreateVisible(false);
-    }
+    createPost.mutate(
+      { url, description: postDescription.trim() || null, folder_id: Number(folderId) },
+      {
+        onSuccess: () => {
+          setPostUrl('');
+          setPostDescription('');
+          setCreateVisible(false);
+        },
+      },
+    );
   };
 
-  const handleUpdateDescription = async () => {
+  const handleUpdateDescription = () => {
     if (!editTarget) return;
-    setUpdating(true);
-    const { error } = await supabase
-      .from('posts')
-      .update({ description: editTarget.description.trim() || null })
-      .eq('id', editTarget.id);
-    setUpdating(false);
-
-    if (error) {
-      showToast('error', '메모 수정에 실패했어요');
-    } else {
-      queryClient.invalidateQueries({ queryKey: [queryKeys.POST_LIST, folderId] });
-      showToast('success', '메모가 수정되었어요');
-      setEditVisible(false);
-    }
+    updatePost.mutate(
+      { id: editTarget.id, description: editTarget.description.trim() || null },
+      {
+        onSuccess: () => setEditVisible(false),
+      },
+    );
   };
 
   const handleViewModeChange = useCallback((mode: ViewMode) => {
@@ -174,6 +153,32 @@ export default function FolderDetailScreen() {
     setEditVisible(true);
   }, []);
 
+  // B-5: FlatList 렌더 최적화 — renderItem/keyExtractor/ItemSeparator 를 useCallback 으로 안정화.
+  // React.memo 된 LinkPreviewCard 가 불필요하게 리렌더되지 않도록 한다.
+  const renderItem = useCallback(
+    ({ item }: { item: { id: number; url: string; description: string | null } }) => (
+      <LinkPreviewCard
+        id={item.id}
+        url={item.url}
+        userDescription={item.description}
+        folderId={folderId}
+        viewMode={viewMode}
+        onEditPress={handleEditPress}
+      />
+    ),
+    [folderId, viewMode, handleEditPress],
+  );
+
+  const keyExtractor = useCallback(
+    (item: { id: number }) => String(item.id),
+    [],
+  );
+
+  const ItemSeparator = useCallback(
+    () => <View style={{ height: viewMode === 'compact' ? 6 : 10 }} />,
+    [viewMode],
+  );
+
   const count = postList?.length ?? 0;
 
   return (
@@ -192,7 +197,7 @@ export default function FolderDetailScreen() {
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.5}>
+            <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.5} accessibilityRole="button" accessibilityLabel="검색 지우기">
               <Text style={styles.searchClear}>취소</Text>
             </TouchableOpacity>
           )}
@@ -208,7 +213,7 @@ export default function FolderDetailScreen() {
           <Text style={styles.countText}>개의 링크</Text>
         </View>
         <View style={styles.countRight}>
-          <TouchableOpacity style={styles.sortBtn} onPress={handleSortToggle} activeOpacity={0.6}>
+          <TouchableOpacity style={styles.sortBtn} onPress={handleSortToggle} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel={`정렬 기준: ${sortOrder === 'newest' ? '최신순' : '오래된순'}`}>
             <SortIcon />
             <Text style={styles.sortText}>{sortOrder === 'newest' ? '최신순' : '오래된순'}</Text>
           </TouchableOpacity>
@@ -217,6 +222,9 @@ export default function FolderDetailScreen() {
               style={[styles.viewToggleBtn, viewMode === 'large' && styles.viewToggleBtnActive]}
               onPress={() => handleViewModeChange('large')}
               activeOpacity={0.6}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: viewMode === 'large' }}
+              accessibilityLabel="큰 카드 보기"
             >
               <GridIcon active={viewMode === 'large'} />
             </TouchableOpacity>
@@ -224,6 +232,9 @@ export default function FolderDetailScreen() {
               style={[styles.viewToggleBtn, viewMode === 'compact' && styles.viewToggleBtnActive]}
               onPress={() => handleViewModeChange('compact')}
               activeOpacity={0.6}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: viewMode === 'compact' }}
+              accessibilityLabel="간단히 보기"
             >
               <ListIcon active={viewMode === 'compact'} />
             </TouchableOpacity>
@@ -238,20 +249,15 @@ export default function FolderDetailScreen() {
       ) : (
         <FlatList
           data={filteredList}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => (
-            <LinkPreviewCard
-              id={item.id}
-              url={item.url}
-              userDescription={item.description}
-              folderId={folderId}
-              viewMode={viewMode}
-              onEditPress={handleEditPress}
-            />
-          )}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
           contentContainerStyle={styles.list}
-          ItemSeparatorComponent={() => <View style={{ height: viewMode === 'compact' ? 6 : 10 }} />}
+          ItemSeparatorComponent={ItemSeparator}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={7}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
           }
@@ -269,6 +275,8 @@ export default function FolderDetailScreen() {
         style={styles.fab}
         onPress={() => { setPostUrl(''); setPostDescription(''); setCreateVisible(true); }}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel="링크 추가"
       >
         <PlusIcon />
       </TouchableOpacity>
@@ -281,7 +289,7 @@ export default function FolderDetailScreen() {
         </View>
         <View style={styles.sheetBtns}>
           <Button variant="secondary" onPress={() => setCreateVisible(false)} style={{ flex: 1 }}>취소</Button>
-          <Button onPress={handleCreate} loading={creating} style={{ flex: 1 }}>추가</Button>
+          <Button onPress={handleCreate} loading={createPost.isPending} style={{ flex: 1 }}>추가</Button>
         </View>
       </BottomSheet>
 
@@ -295,7 +303,7 @@ export default function FolderDetailScreen() {
         />
         <View style={styles.sheetBtns}>
           <Button variant="secondary" onPress={() => setEditVisible(false)} style={{ flex: 1 }}>취소</Button>
-          <Button onPress={handleUpdateDescription} loading={updating} style={{ flex: 1 }}>저장</Button>
+          <Button onPress={handleUpdateDescription} loading={updatePost.isPending} style={{ flex: 1 }}>저장</Button>
         </View>
       </BottomSheet>
     </View>

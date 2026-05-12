@@ -1,4 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import Svg, { Path } from 'react-native-svg';

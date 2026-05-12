@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+
 import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { useNetInfo } from '@react-native-community/netinfo';

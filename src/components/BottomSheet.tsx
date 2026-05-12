@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+
 import {
   Animated,
   Dimensions,
@@ -51,14 +52,14 @@ export default function BottomSheet({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.overlay}
       >
-        <Pressable style={styles.backdrop} onPress={onClose} />
+        <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="닫기" />
         <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
           <View style={styles.handleBar}>
             <View style={styles.handle} />
           </View>
           {title && (
             <View style={styles.header}>
-              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.title} accessibilityRole="header">{title}</Text>
               {description && <Text style={styles.description}>{description}</Text>}
             </View>
           )}

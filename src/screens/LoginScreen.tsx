@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+
 import {
   ActivityIndicator,
   Image,
@@ -90,6 +91,9 @@ function SocialLoginButton({ type }: { type: 'kakao' | 'google' }) {
       onPress={handleSignIn}
       activeOpacity={0.75}
       disabled={loading}
+      accessibilityRole="button"
+      accessibilityLabel={isKakao ? 'Kakao로 로그인' : 'Google로 로그인'}
+      accessibilityState={{ disabled: loading, busy: loading }}
     >
       {loading ? (
         <ActivityIndicator color={isKakao ? '#191919' : colors.gray[600]} />
@@ -181,7 +185,7 @@ export default function LoginScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.topSection}>
-        <Image source={logoImage} style={styles.logo} />
+        <Image source={logoImage} style={styles.logo} accessibilityLabel="Link Nest 로고" />
         <Text style={styles.title}>Link Nest</Text>
         <Text style={styles.subtitle}>
           {'즐겨찾는 공유 링크를\n모두 모아둘 수 있는 아늑한 장소'}

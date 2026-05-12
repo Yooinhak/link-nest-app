@@ -1,4 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
+
 import {
   Dimensions,
   Modal,
@@ -53,6 +54,8 @@ export default function ContextMenu({ items, trigger }: ContextMenuProps) {
         }}
         activeOpacity={0.5}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel="더 보기"
       >
         {trigger}
       </TouchableOpacity>
@@ -77,6 +80,8 @@ export default function ContextMenu({ items, trigger }: ContextMenuProps) {
                   setTimeout(item.onPress, 200);
                 }}
                 activeOpacity={0.5}
+                accessibilityRole="menuitem"
+                accessibilityLabel={item.label}
               >
                 {item.icon && <View style={styles.menuIcon}>{item.icon}</View>}
                 <Text style={[styles.menuText, item.destructive && styles.destructiveText]}>

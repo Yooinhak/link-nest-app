@@ -1,5 +1,6 @@
-import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
+
+import * as Haptics from 'expo-haptics';
 
 /** 가벼운 탭 피드백 (버튼 탭, 토글 등) */
 export function lightTap() {

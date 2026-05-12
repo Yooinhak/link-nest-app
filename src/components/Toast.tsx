@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
+
+import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -9,14 +10,21 @@ import { successTap, warningTap } from '../utils/haptics';
 
 type ToastType = 'success' | 'error';
 
+interface ToastAction {
+  label: string;
+  onPress: () => void;
+}
+
 interface ToastMessage {
   id: number;
   type: ToastType;
   message: string;
+  action?: ToastAction;
+  duration?: number;
 }
 
 interface ToastContextType {
-  showToast: (type: ToastType, message: string) => void;
+  showToast: (type: ToastType, message: string, options?: { action?: ToastAction; duration?: number }) => void;
 }
 
 const ToastContext = createContext<ToastContextType | null>(null);
@@ -42,6 +50,7 @@ const XIcon = () => (
 function ToastItem({ toast, onDone }: { toast: ToastMessage; onDone: (id: number) => void }) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-20)).current;
+  const duration = toast.duration ?? 2200;
 
   useEffect(() => {
     Animated.parallel([
@@ -54,19 +63,44 @@ function ToastItem({ toast, onDone }: { toast: ToastMessage; onDone: (id: number
         Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }),
         Animated.timing(translateY, { toValue: -20, duration: 200, useNativeDriver: true }),
       ]).start(() => onDone(toast.id));
-    }, 2200);
+    }, duration);
 
     return () => clearTimeout(timer);
   }, []);
 
   const isSuccess = toast.type === 'success';
 
+  const handleActionPress = () => {
+    toast.action?.onPress();
+    // 액션 버튼을 누르면 즉시 토스트를 닫는다
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 0, duration: 150, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: -20, duration: 150, useNativeDriver: true }),
+    ]).start(() => onDone(toast.id));
+  };
+
   return (
-    <Animated.View style={[styles.toast, { opacity, transform: [{ translateY }] }]}>
-      <View style={[styles.iconWrap, { backgroundColor: isSuccess ? colors.success : colors.destructive }]}>
+    <Animated.View
+      style={[styles.toast, { opacity, transform: [{ translateY }] }]}
+      accessibilityRole="alert"
+      accessibilityLiveRegion="assertive"
+      accessibilityLabel={toast.message}
+    >
+      <View style={[styles.iconWrap, { backgroundColor: isSuccess ? colors.success : colors.destructive }]} importantForAccessibility="no-hide-descendants">
         {isSuccess ? <CheckIcon /> : <XIcon />}
       </View>
       <Text style={styles.toastText}>{toast.message}</Text>
+      {toast.action && (
+        <TouchableOpacity
+          onPress={handleActionPress}
+          style={styles.actionBtn}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={toast.action.label}
+        >
+          <Text style={styles.actionText}>{toast.action.label}</Text>
+        </TouchableOpacity>
+      )}
     </Animated.View>
   );
 }
@@ -77,10 +111,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const showToast = useCallback((type: ToastType, message: string) => {
+  const showToast = useCallback((type: ToastType, message: string, options?: { action?: ToastAction; duration?: number }) => {
     if (type === 'success') successTap();
     else warningTap();
-    setToasts((prev) => [...prev, { id: ++toastId, type, message }]);
+    setToasts((prev) => [...prev, { id: ++toastId, type, message, action: options?.action, duration: options?.duration }]);
   }, []);
 
   const handleDone = useCallback((id: number) => {
@@ -90,7 +124,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <View style={[styles.container, { top: insets.top + (Platform.OS === 'ios' ? 8 : 16) }]} pointerEvents="none">
+      <View style={[styles.container, { top: insets.top + (Platform.OS === 'ios' ? 8 : 16) }]} pointerEvents="box-none">
         {toasts.map((t) => (
           <ToastItem key={t.id} toast={t} onDone={handleDone} />
         ))}
@@ -136,5 +170,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.white,
     letterSpacing: -0.2,
+  },
+  actionBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  actionText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.white,
   },
 });

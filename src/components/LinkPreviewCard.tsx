@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
-import { Animated, Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Animated, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+import { useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 import { Swipeable } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
 
 import { colors } from '../constants/theme';
+import { useDeferredDeletePost } from '../hooks/queries';
 import { warningTap } from '../utils/haptics';
 import { parseMetadata } from '../utils/parseMetadata';
 import { queryKeys } from '../utils/react-query/queryKeys';
-import { supabase } from '../utils/supabase/client';
+
 import AlertDialog from './AlertDialog';
 import Skeleton from './Skeleton';
-import { useToast } from './Toast';
 
 export type ViewMode = 'large' | 'compact';
 
@@ -87,11 +89,10 @@ function renderRightActions(progress: Animated.AnimatedInterpolation<number>, dr
   );
 }
 
-export default function LinkPreviewCard({ id, url, userDescription, folderId, viewMode = 'large', onEditPress }: LinkPreviewCardProps) {
-  const queryClient = useQueryClient();
-  const { showToast } = useToast();
+function LinkPreviewCard({ id, url, userDescription, folderId, viewMode = 'large', onEditPress }: LinkPreviewCardProps) {
   const [deleteVisible, setDeleteVisible] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  const deferredDelete = useDeferredDeletePost(folderId);
 
   const { data: metadata, isLoading } = useQuery({
     queryKey: [queryKeys.METADATA, url],
@@ -99,23 +100,8 @@ export default function LinkPreviewCard({ id, url, userDescription, folderId, vi
     enabled: !!url,
   });
 
-  const handleDelete = async () => {
-    // Optimistic Update: 즉시 UI에서 제거
-    const queryKey = [queryKeys.POST_LIST, folderId];
-    const previousPosts = queryClient.getQueryData(queryKey);
-    queryClient.setQueryData(queryKey, (old: any) => {
-      if (!old?.data) return old;
-      return { ...old, data: old.data.filter((p: any) => p.id !== id) };
-    });
-
-    const { error } = await supabase.from('posts').delete().eq('id', id);
-    if (error) {
-      queryClient.setQueryData(queryKey, previousPosts);
-      showToast('error', '링크 삭제에 실패했어요');
-    } else {
-      queryClient.invalidateQueries({ queryKey });
-      showToast('success', '링크가 삭제되었어요');
-    }
+  const handleDelete = () => {
+    deferredDelete.execute(id);
   };
 
   const handleSwipeOpen = () => {
@@ -128,12 +114,19 @@ export default function LinkPreviewCard({ id, url, userDescription, folderId, vi
   })();
 
   const cardContent = viewMode === 'compact' ? (
-    <TouchableOpacity style={compactStyles.card} onPress={() => Linking.openURL(url)} activeOpacity={0.6}>
+    <TouchableOpacity style={compactStyles.card} onPress={() => Linking.openURL(url)} activeOpacity={0.6} accessibilityRole="link" accessibilityLabel={`${metadata?.title || domain} 링크 열기`}>
       {/* Compact Thumbnail */}
       {isLoading ? (
         <Skeleton width={56} height={56} borderRadius={10} />
       ) : metadata?.image && !imageFailed ? (
-        <Image source={{ uri: metadata.image }} style={compactStyles.thumbnail} resizeMode="cover" onError={() => setImageFailed(true)} />
+        <Image
+          source={{ uri: metadata.image }}
+          style={compactStyles.thumbnail}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={200}
+          onError={() => setImageFailed(true)}
+        />
       ) : (
         <View style={compactStyles.thumbnailFallback}>
           <Text style={compactStyles.thumbnailFallbackText}>{domain.charAt(0).toUpperCase()}</Text>
@@ -168,6 +161,8 @@ export default function LinkPreviewCard({ id, url, userDescription, folderId, vi
             onPress={(e) => { e.stopPropagation(); onEditPress(id, userDescription); }}
             activeOpacity={0.5}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="메모 수정"
           >
             <PenIcon />
           </TouchableOpacity>
@@ -177,18 +172,27 @@ export default function LinkPreviewCard({ id, url, userDescription, folderId, vi
           onPress={(e) => { e.stopPropagation(); setDeleteVisible(true); }}
           activeOpacity={0.5}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="링크 삭제"
         >
           <TrashIcon />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
   ) : (
-    <TouchableOpacity style={styles.card} onPress={() => Linking.openURL(url)} activeOpacity={0.6}>
+    <TouchableOpacity style={styles.card} onPress={() => Linking.openURL(url)} activeOpacity={0.6} accessibilityRole="link" accessibilityLabel={`${metadata?.title || domain} 링크 열기`}>
       {/* Thumbnail */}
       {isLoading ? (
         <Skeleton width="100%" height={160} borderRadius={12} />
       ) : metadata?.image && !imageFailed ? (
-        <Image source={{ uri: metadata.image }} style={styles.thumbnail} resizeMode="cover" onError={() => setImageFailed(true)} />
+        <Image
+          source={{ uri: metadata.image }}
+          style={styles.thumbnail}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={200}
+          onError={() => setImageFailed(true)}
+        />
       ) : (
         <View style={styles.thumbnailFallback}>
           <Text style={styles.thumbnailFallbackText}>{domain.charAt(0).toUpperCase()}</Text>
@@ -233,6 +237,8 @@ export default function LinkPreviewCard({ id, url, userDescription, folderId, vi
             onPress={(e) => { e.stopPropagation(); onEditPress(id, userDescription); }}
             activeOpacity={0.5}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="메모 수정"
           >
             <PenIcon />
           </TouchableOpacity>
@@ -242,6 +248,8 @@ export default function LinkPreviewCard({ id, url, userDescription, folderId, vi
           onPress={(e) => { e.stopPropagation(); setDeleteVisible(true); }}
           activeOpacity={0.5}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="링크 삭제"
         >
           <TrashIcon />
         </TouchableOpacity>
@@ -425,3 +433,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+// B-5: FlatList 리렌더 최소화를 위해 memo 적용. props가 같으면 재렌더 스킵.
+// id/url/userDescription/folderId/viewMode 변경 시에만 리렌더되며, onEditPress는
+// 부모에서 useCallback으로 안정화된 참조를 전달해야 효과적.
+export default React.memo(LinkPreviewCard);

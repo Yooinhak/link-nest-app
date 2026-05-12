@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
+
 import {
   ActivityIndicator,
-  Image,
   Linking,
   StyleSheet,
   Text,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -132,14 +133,20 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Text style={styles.headerTitle}>설정</Text>
+      <Text style={styles.headerTitle} accessibilityRole="header">설정</Text>
 
       <View style={styles.section}>
         <View style={styles.profileRow}>
           {isLoading ? (
             <Skeleton width={56} height={56} borderRadius={28} />
           ) : user?.user_metadata?.avatar_url ? (
-            <Image source={{ uri: user.user_metadata.avatar_url }} style={styles.avatar} />
+            <Image
+              source={{ uri: user.user_metadata.avatar_url }}
+              style={styles.avatar}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={200}
+            />
           ) : (
             <View style={styles.avatarFallback}>
               <Text style={styles.avatarLetter}>{user?.email?.charAt(0).toUpperCase() ?? '?'}</Text>
@@ -161,13 +168,13 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <TouchableOpacity style={styles.menuRow} onPress={() => setLogoutVisible(true)} activeOpacity={0.5}>
+        <TouchableOpacity style={styles.menuRow} onPress={() => setLogoutVisible(true)} activeOpacity={0.5} accessibilityRole="button" accessibilityLabel="로그아웃">
           <LogoutIcon />
           <Text style={[styles.menuLabel, { color: colors.destructive }]}>로그아웃</Text>
           <ChevronRight />
         </TouchableOpacity>
         <View style={styles.divider} />
-        <TouchableOpacity style={styles.menuRow} onPress={openDeleteSheet} activeOpacity={0.5}>
+        <TouchableOpacity style={styles.menuRow} onPress={openDeleteSheet} activeOpacity={0.5} accessibilityRole="button" accessibilityLabel="계정 삭제">
           <TrashIcon />
           <Text style={[styles.menuLabel, { color: colors.destructive }]}>계정 삭제</Text>
           <ChevronRight />
@@ -179,6 +186,8 @@ export default function ProfileScreen() {
           style={styles.menuRow}
           onPress={() => Linking.openURL(EXTERNAL_URLS.PRIVACY_POLICY)}
           activeOpacity={0.5}
+          accessibilityRole="link"
+          accessibilityLabel="개인정보 처리방침"
         >
           <ShieldIcon />
           <Text style={[styles.menuLabel, { color: colors.gray[800] }]}>개인정보 처리방침</Text>
@@ -189,6 +198,8 @@ export default function ProfileScreen() {
           style={styles.menuRow}
           onPress={() => Linking.openURL(EXTERNAL_URLS.TERMS_OF_SERVICE)}
           activeOpacity={0.5}
+          accessibilityRole="link"
+          accessibilityLabel="이용약관"
         >
           <FileTextIcon />
           <Text style={[styles.menuLabel, { color: colors.gray[800] }]}>이용약관</Text>
@@ -233,6 +244,8 @@ export default function ProfileScreen() {
               onPress={closeDeleteSheet}
               disabled={isDeleting}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="취소"
             >
               <Text style={styles.deleteCancelText}>취소</Text>
             </TouchableOpacity>
@@ -241,6 +254,9 @@ export default function ProfileScreen() {
               onPress={handleDeleteAccount}
               disabled={!canDelete}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="계정 삭제 확인"
+              accessibilityState={{ disabled: !canDelete, busy: isDeleting }}
             >
               {isDeleting ? (
                 <ActivityIndicator color={colors.white} />

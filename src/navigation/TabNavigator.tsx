@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { Platform, StyleSheet } from 'react-native';
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -7,6 +8,7 @@ import Svg, { Path } from 'react-native-svg';
 import { colors } from '../constants/theme';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+
 import { TabParamList } from './types';
 
 const Tab = createBottomTabNavigator<TabParamList>();

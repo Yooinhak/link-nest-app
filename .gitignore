@@ -46,3 +46,9 @@ yarn-error.*
 .claude/
 !README.md
 *.md
+
+# bkit
+.bkit/
+.bkit-memory.json
+docs/package-lock.json
+package-lock.json

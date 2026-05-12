@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { View } from 'react-native';
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -6,6 +7,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import OfflineBanner from '../components/OfflineBanner';
 import { colors } from '../constants/theme';
 import FolderDetailScreen from '../screens/FolderDetailScreen';
+
 import TabNavigator from './TabNavigator';
 import { MainStackParamList } from './types';
 
