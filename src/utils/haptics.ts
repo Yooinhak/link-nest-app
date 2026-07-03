@@ -16,6 +16,13 @@ export function mediumTap() {
   }
 }
 
+/** 선택/임계값 도달 피드백 (스와이프 임계값 cross 등) */
+export function selectionTap() {
+  if (Platform.OS !== 'web') {
+    Haptics.selectionAsync();
+  }
+}
+
 /** 성공 피드백 (생성, 저장 완료 등) */
 export function successTap() {
   if (Platform.OS !== 'web') {

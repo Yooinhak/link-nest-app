@@ -1,6 +1,17 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 
-import { FlatList, LayoutAnimation, Platform, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, UIManager, View } from 'react-native';
+import {
+  FlatList,
+  LayoutAnimation,
+  Platform,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  UIManager,
+  View,
+} from 'react-native';
 
 import { RouteProp, useRoute } from '@react-navigation/native';
 import Svg, { Path } from 'react-native-svg';
@@ -9,7 +20,11 @@ import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
 import Input from '../components/Input';
-import LinkPreviewCard, { LinkPreviewCardSkeleton, ViewMode } from '../components/LinkPreviewCard';
+import LinkPreviewCard, {
+  type LinkPreviewCardHandle,
+  LinkPreviewCardSkeleton,
+  ViewMode,
+} from '../components/LinkPreviewCard';
 import { useToast } from '../components/Toast';
 import { colors } from '../constants/theme';
 import { useCreatePost, usePostsQuery, useUpdatePost } from '../hooks/queries';
@@ -26,31 +41,75 @@ type FolderDetailRouteProp = RouteProp<MainStackParamList, 'FolderDetail'>;
 type SortOrder = 'newest' | 'oldest';
 
 const PlusIcon = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.white} strokeWidth={2.5} strokeLinecap="round">
+  <Svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={colors.white}
+    strokeWidth={2.5}
+    strokeLinecap="round"
+  >
     <Path d="M12 5v14M5 12h14" />
   </Svg>
 );
 
 const GridIcon = ({ active }: { active: boolean }) => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={active ? colors.primary : colors.gray[400]} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={active ? colors.primary : colors.gray[400]}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />
   </Svg>
 );
 
 const ListIcon = ({ active }: { active: boolean }) => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={active ? colors.primary : colors.gray[400]} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={active ? colors.primary : colors.gray[400]}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
   </Svg>
 );
 
 const SearchIcon = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.gray[400]} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={16}
+    height={16}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={colors.gray[400]}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35" />
   </Svg>
 );
 
 const SortIcon = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.gray[600]} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={16}
+    height={16}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={colors.gray[600]}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="m3 16 4 4 4-4M7 20V4M21 8l-4-4-4 4M17 4v16" />
   </Svg>
 );
@@ -83,8 +142,7 @@ export default function FolderDetailScreen() {
       const q = searchQuery.toLowerCase();
       list = list.filter(
         (item) =>
-          item.url.toLowerCase().includes(q) ||
-          (item.description && item.description.toLowerCase().includes(q))
+          item.url.toLowerCase().includes(q) || (item.description && item.description.toLowerCase().includes(q)),
       );
     }
 
@@ -153,6 +211,16 @@ export default function FolderDetailScreen() {
     setEditVisible(true);
   }, []);
 
+  // iOS Mail 패턴: 한 번에 한 카드만 열린 상태로 유지.
+  // 카드가 스와이프 시작 시 자신의 핸들을 전달하며, 이전 카드를 닫는다.
+  const lastOpenedRef = useRef<LinkPreviewCardHandle | null>(null);
+  const handleSwipeStart = useCallback((handle: LinkPreviewCardHandle) => {
+    if (lastOpenedRef.current && lastOpenedRef.current !== handle) {
+      lastOpenedRef.current.close();
+    }
+    lastOpenedRef.current = handle;
+  }, []);
+
   // B-5: FlatList 렌더 최적화 — renderItem/keyExtractor/ItemSeparator 를 useCallback 으로 안정화.
   // React.memo 된 LinkPreviewCard 가 불필요하게 리렌더되지 않도록 한다.
   const renderItem = useCallback(
@@ -164,20 +232,15 @@ export default function FolderDetailScreen() {
         folderId={folderId}
         viewMode={viewMode}
         onEditPress={handleEditPress}
+        onSwipeStart={handleSwipeStart}
       />
     ),
-    [folderId, viewMode, handleEditPress],
+    [folderId, viewMode, handleEditPress, handleSwipeStart],
   );
 
-  const keyExtractor = useCallback(
-    (item: { id: number }) => String(item.id),
-    [],
-  );
+  const keyExtractor = useCallback((item: { id: number }) => String(item.id), []);
 
-  const ItemSeparator = useCallback(
-    () => <View style={{ height: viewMode === 'compact' ? 6 : 10 }} />,
-    [viewMode],
-  );
+  const ItemSeparator = useCallback(() => <View style={{ height: viewMode === 'compact' ? 6 : 10 }} />, [viewMode]);
 
   const count = postList?.length ?? 0;
 
@@ -197,7 +260,12 @@ export default function FolderDetailScreen() {
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.5} accessibilityRole="button" accessibilityLabel="검색 지우기">
+            <TouchableOpacity
+              onPress={() => setSearchQuery('')}
+              activeOpacity={0.5}
+              accessibilityRole="button"
+              accessibilityLabel="검색 지우기"
+            >
               <Text style={styles.searchClear}>취소</Text>
             </TouchableOpacity>
           )}
@@ -213,7 +281,13 @@ export default function FolderDetailScreen() {
           <Text style={styles.countText}>개의 링크</Text>
         </View>
         <View style={styles.countRight}>
-          <TouchableOpacity style={styles.sortBtn} onPress={handleSortToggle} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel={`정렬 기준: ${sortOrder === 'newest' ? '최신순' : '오래된순'}`}>
+          <TouchableOpacity
+            style={styles.sortBtn}
+            onPress={handleSortToggle}
+            activeOpacity={0.6}
+            accessibilityRole="button"
+            accessibilityLabel={`정렬 기준: ${sortOrder === 'newest' ? '최신순' : '오래된순'}`}
+          >
             <SortIcon />
             <Text style={styles.sortText}>{sortOrder === 'newest' ? '최신순' : '오래된순'}</Text>
           </TouchableOpacity>
@@ -244,7 +318,9 @@ export default function FolderDetailScreen() {
 
       {isLoading ? (
         <View style={styles.list}>
-          {[1, 2, 3].map((i) => <LinkPreviewCardSkeleton key={i} viewMode={viewMode} />)}
+          {[1, 2, 3].map((i) => (
+            <LinkPreviewCardSkeleton key={i} viewMode={viewMode} />
+          ))}
         </View>
       ) : (
         <FlatList
@@ -258,9 +334,7 @@ export default function FolderDetailScreen() {
           initialNumToRender={8}
           maxToRenderPerBatch={8}
           windowSize={7}
-          refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
-          }
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
           ListEmptyComponent={
             searchQuery ? (
               <EmptyState type="search" title="검색 결과가 없어요" subtitle="다른 키워드로 검색해보세요" />
@@ -273,7 +347,11 @@ export default function FolderDetailScreen() {
 
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => { setPostUrl(''); setPostDescription(''); setCreateVisible(true); }}
+        onPress={() => {
+          setPostUrl('');
+          setPostDescription('');
+          setCreateVisible(true);
+        }}
         activeOpacity={0.8}
         accessibilityRole="button"
         accessibilityLabel="링크 추가"
@@ -284,12 +362,29 @@ export default function FolderDetailScreen() {
       {/* 링크 추가 바텀시트 */}
       <BottomSheet visible={createVisible} onClose={() => setCreateVisible(false)} title="링크 추가">
         <View style={styles.form}>
-          <Input label="URL" placeholder="https://" value={postUrl} onChangeText={setPostUrl} autoCapitalize="none" keyboardType="url" autoFocus />
-          <Input label="메모 (선택)" placeholder="이 링크에 대한 메모" value={postDescription} onChangeText={setPostDescription} />
+          <Input
+            label="URL"
+            placeholder="https://"
+            value={postUrl}
+            onChangeText={setPostUrl}
+            autoCapitalize="none"
+            keyboardType="url"
+            autoFocus
+          />
+          <Input
+            label="메모 (선택)"
+            placeholder="이 링크에 대한 메모"
+            value={postDescription}
+            onChangeText={setPostDescription}
+          />
         </View>
         <View style={styles.sheetBtns}>
-          <Button variant="secondary" onPress={() => setCreateVisible(false)} style={{ flex: 1 }}>취소</Button>
-          <Button onPress={handleCreate} loading={createPost.isPending} style={{ flex: 1 }}>추가</Button>
+          <Button variant="secondary" onPress={() => setCreateVisible(false)} style={{ flex: 1 }}>
+            취소
+          </Button>
+          <Button onPress={handleCreate} loading={createPost.isPending} style={{ flex: 1 }}>
+            추가
+          </Button>
         </View>
       </BottomSheet>
 
@@ -302,8 +397,12 @@ export default function FolderDetailScreen() {
           autoFocus
         />
         <View style={styles.sheetBtns}>
-          <Button variant="secondary" onPress={() => setEditVisible(false)} style={{ flex: 1 }}>취소</Button>
-          <Button onPress={handleUpdateDescription} loading={updatePost.isPending} style={{ flex: 1 }}>저장</Button>
+          <Button variant="secondary" onPress={() => setEditVisible(false)} style={{ flex: 1 }}>
+            취소
+          </Button>
+          <Button onPress={handleUpdateDescription} loading={updatePost.isPending} style={{ flex: 1 }}>
+            저장
+          </Button>
         </View>
       </BottomSheet>
     </View>
