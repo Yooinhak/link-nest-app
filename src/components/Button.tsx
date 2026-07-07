@@ -8,7 +8,7 @@ import {
   TouchableOpacityProps,
 } from 'react-native';
 
-import { colors } from '../constants/theme';
+import { colors, radius } from '../constants/theme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type ButtonSize = 'large' | 'medium' | 'small';
@@ -39,7 +39,7 @@ export default function Button({
         {
           backgroundColor: v.bg,
           borderRadius: s.radius,
-          paddingVertical: s.py,
+          height: s.height,
           paddingHorizontal: s.px,
         },
         (disabled || loading) && { opacity: 0.4 },
@@ -62,17 +62,20 @@ export default function Button({
   );
 }
 
+// Clean 리디자인 토큰 (design_handoff/README.md)
+// primary: 파란 배경/흰 글씨 · secondary: divider 배경/textSub 글씨 · danger: solid #F04452
 const VARIANTS = {
   primary: { bg: colors.primary, text: colors.white },
-  secondary: { bg: colors.gray[100], text: colors.gray[800] },
-  ghost: { bg: 'transparent', text: colors.gray[600] },
-  danger: { bg: colors.destructiveLight, text: colors.destructive },
+  secondary: { bg: colors.divider, text: colors.textSub },
+  ghost: { bg: 'transparent', text: colors.textMuted },
+  danger: { bg: colors.danger, text: colors.white },
 } as const;
 
+// large: 로그인 등 화면 최하단 CTA (54/16) · medium: 시트 내 버튼 (52/14) · small: 칩형 (36/10)
 const SIZES = {
-  large: { py: 16, px: 24, font: 16, radius: 16 },
-  medium: { py: 12, px: 20, font: 15, radius: 12 },
-  small: { py: 8, px: 14, font: 13, radius: 10 },
+  large: { height: 54, px: 24, font: 16, radius: 16 },
+  medium: { height: 52, px: 20, font: 15, radius: radius.button },
+  small: { height: 36, px: 14, font: 13, radius: radius.chip },
 } as const;
 
 const styles = StyleSheet.create({

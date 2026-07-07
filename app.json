@@ -7,11 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "link-nest-app",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#3182F6"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "dev.inak.linknest",
@@ -33,6 +28,14 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 224,
+          "backgroundColor": "#FFFFFF"
+        }
+      ],
       "expo-web-browser",
       [
         "@sentry/react-native/expo",

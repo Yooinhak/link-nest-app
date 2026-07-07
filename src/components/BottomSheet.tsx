@@ -13,7 +13,16 @@ import {
   View,
 } from 'react-native';
 
-import { colors } from '../constants/theme';
+import { colors, radius, shadows } from '../constants/theme';
+
+/**
+ * 공용 바텀시트 — 커스텀(Modal + Animated) 구현.
+ *
+ * NOTE: @gorhom/bottom-sheet 마이그레이션을 시도했으나 SDK 55 + iOS 환경의
+ * worklets 크래시(reanimated discussion #9023)로 시트가 열리지 않는 문제가
+ * 재현되어 이 구현으로 롤백함 (2026-07-03). 환경 이슈 해소 후 재시도 여지 있음
+ * — 당시 코드는 git 히스토리/research.md 참고.
+ */
 
 interface BottomSheetProps {
   visible: boolean;
@@ -77,14 +86,15 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(15, 17, 21, 0.32)',
   },
   sheet: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
     maxHeight: SCREEN_HEIGHT * 0.85,
+    ...shadows.sheet,
   },
   handleBar: {
     alignItems: 'center',
@@ -92,27 +102,28 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.gray[300],
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.border,
   },
   header: {
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 14,
     paddingBottom: 8,
-    gap: 6,
+    gap: 4,
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
-    color: colors.gray[900],
-    letterSpacing: -0.3,
+    fontWeight: '800',
+    color: colors.ink,
+    letterSpacing: -0.6, // -0.03em
   },
   description: {
-    fontSize: 14,
-    color: colors.gray[500],
-    lineHeight: 20,
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textFaint,
+    lineHeight: 19,
   },
   content: {
     paddingHorizontal: 24,

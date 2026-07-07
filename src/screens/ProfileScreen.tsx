@@ -1,68 +1,28 @@
 import React, { useState } from 'react';
 
-import {
-  ActivityIndicator,
-  Linking,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 
 import AlertDialog from '../components/AlertDialog';
 import BottomSheet from '../components/BottomSheet';
+import Button from '../components/Button';
+import {
+  ChevronRightIcon,
+  FileTextIcon,
+  LogOutIcon,
+  ShieldIcon,
+  TrashIcon,
+} from '../components/icons';
+import Input from '../components/Input';
 import Skeleton from '../components/Skeleton';
 import { useToast } from '../components/Toast';
-import { colors } from '../constants/theme';
+import { colors, shadows } from '../constants/theme';
 import { EXTERNAL_URLS } from '../constants/urls';
 import { queryKeys } from '../utils/react-query/queryKeys';
 import { supabase } from '../utils/supabase/client';
-
-const LogoutIcon = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.destructive} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-    <Path d="m16 17 5-5-5-5" />
-    <Path d="M21 12H9" />
-  </Svg>
-);
-
-const TrashIcon = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.destructive} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M3 6h18" />
-    <Path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-    <Path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    <Path d="M10 11v6" />
-    <Path d="M14 11v6" />
-  </Svg>
-);
-
-const ShieldIcon = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.gray[600]} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
-  </Svg>
-);
-
-const FileTextIcon = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.gray[600]} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-    <Path d="M14 2v4a2 2 0 0 0 2 2h4" />
-    <Path d="M10 9H8" />
-    <Path d="M16 13H8" />
-    <Path d="M16 17H8" />
-  </Svg>
-);
-
-const ChevronRight = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.gray[400]} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="m9 18 6-6-6-6" />
-  </Svg>
-);
 
 // 계정 삭제를 최종 확정시키기 위해 사용자가 반드시 타이핑해야 하는 문구.
 // 실수로 삭제가 일어나는 것을 방지하기 위한 2단계 확인의 핵심 장치.
@@ -169,15 +129,15 @@ export default function ProfileScreen() {
 
       <View style={styles.section}>
         <TouchableOpacity style={styles.menuRow} onPress={() => setLogoutVisible(true)} activeOpacity={0.5} accessibilityRole="button" accessibilityLabel="로그아웃">
-          <LogoutIcon />
-          <Text style={[styles.menuLabel, { color: colors.destructive }]}>로그아웃</Text>
-          <ChevronRight />
+          <LogOutIcon size={20} color={colors.danger} />
+          <Text style={[styles.menuLabel, { color: colors.danger }]}>로그아웃</Text>
+          <ChevronRightIcon size={16} color={colors.iconFaint} />
         </TouchableOpacity>
         <View style={styles.divider} />
         <TouchableOpacity style={styles.menuRow} onPress={openDeleteSheet} activeOpacity={0.5} accessibilityRole="button" accessibilityLabel="계정 삭제">
-          <TrashIcon />
-          <Text style={[styles.menuLabel, { color: colors.destructive }]}>계정 삭제</Text>
-          <ChevronRight />
+          <TrashIcon size={20} color={colors.danger} />
+          <Text style={[styles.menuLabel, { color: colors.danger }]}>계정 삭제</Text>
+          <ChevronRightIcon size={16} color={colors.iconFaint} />
         </TouchableOpacity>
       </View>
 
@@ -189,9 +149,9 @@ export default function ProfileScreen() {
           accessibilityRole="link"
           accessibilityLabel="개인정보 처리방침"
         >
-          <ShieldIcon />
-          <Text style={[styles.menuLabel, { color: colors.gray[800] }]}>개인정보 처리방침</Text>
-          <ChevronRight />
+          <ShieldIcon size={20} color={colors.textMuted} />
+          <Text style={[styles.menuLabel, { color: colors.text }]}>개인정보 처리방침</Text>
+          <ChevronRightIcon size={16} color={colors.iconFaint} />
         </TouchableOpacity>
         <View style={styles.divider} />
         <TouchableOpacity
@@ -201,9 +161,9 @@ export default function ProfileScreen() {
           accessibilityRole="link"
           accessibilityLabel="이용약관"
         >
-          <FileTextIcon />
-          <Text style={[styles.menuLabel, { color: colors.gray[800] }]}>이용약관</Text>
-          <ChevronRight />
+          <FileTextIcon size={20} color={colors.textMuted} />
+          <Text style={[styles.menuLabel, { color: colors.text }]}>이용약관</Text>
+          <ChevronRightIcon size={16} color={colors.iconFaint} />
         </TouchableOpacity>
       </View>
 
@@ -228,42 +188,35 @@ export default function ProfileScreen() {
         description={`저장한 모든 폴더와 링크가 영구적으로 삭제되며, 복구할 수 없어요.\n계속하려면 아래에 "${DELETE_CONFIRMATION_TEXT}" 라고 입력해주세요.`}
       >
         <View style={styles.deleteBody}>
-          <TextInput
+          <Input
             value={deleteConfirmText}
             onChangeText={setDeleteConfirmText}
             placeholder={DELETE_CONFIRMATION_TEXT}
-            placeholderTextColor={colors.gray[400]}
             style={styles.deleteInput}
             autoCapitalize="none"
             autoCorrect={false}
             editable={!isDeleting}
           />
           <View style={styles.deleteButtonRow}>
-            <TouchableOpacity
-              style={[styles.deleteCancelButton, isDeleting && styles.buttonDisabled]}
+            <Button
+              variant="secondary"
               onPress={closeDeleteSheet}
               disabled={isDeleting}
-              activeOpacity={0.7}
-              accessibilityRole="button"
+              style={{ flex: 1 }}
               accessibilityLabel="취소"
             >
-              <Text style={styles.deleteCancelText}>취소</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.deleteConfirmButton, !canDelete && styles.buttonDisabled]}
+              취소
+            </Button>
+            <Button
+              variant="danger"
               onPress={handleDeleteAccount}
               disabled={!canDelete}
-              activeOpacity={0.8}
-              accessibilityRole="button"
+              loading={isDeleting}
+              style={{ flex: 1 }}
               accessibilityLabel="계정 삭제 확인"
-              accessibilityState={{ disabled: !canDelete, busy: isDeleting }}
             >
-              {isDeleting ? (
-                <ActivityIndicator color={colors.white} />
-              ) : (
-                <Text style={styles.deleteConfirmText}>계정 삭제</Text>
-              )}
-            </TouchableOpacity>
+              계정 삭제
+            </Button>
           </View>
         </View>
       </BottomSheet>
@@ -272,49 +225,49 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  headerTitle: { fontSize: 26, fontWeight: '800', color: colors.gray[900], letterSpacing: -0.5, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 },
-  section: { backgroundColor: colors.white, marginHorizontal: 20, borderRadius: 16, marginBottom: 12, overflow: 'hidden' },
-  profileRow: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 16 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: colors.ink,
+    letterSpacing: -1.04, // -0.04em
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 18,
+  },
+  // 시안 06: 카드 그룹 — radius 18 + 은은한 그림자 (overflow hidden 은 iOS 그림자를 죽여 제거)
+  section: {
+    backgroundColor: colors.surface,
+    marginHorizontal: 20,
+    borderRadius: 18,
+    marginBottom: 14,
+    ...shadows.card,
+  },
+  profileRow: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 15 },
   avatar: { width: 56, height: 56, borderRadius: 28 },
   avatarFallback: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   avatarLetter: { fontSize: 24, fontWeight: '700', color: colors.white },
-  profileInfo: { flex: 1, gap: 4 },
-  name: { fontSize: 18, fontWeight: '700', color: colors.gray[900], letterSpacing: -0.3 },
-  email: { fontSize: 14, color: colors.gray[500] },
-  menuRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, gap: 14 },
+  profileInfo: { flex: 1, gap: 3 },
+  name: { fontSize: 18, fontWeight: '700', color: colors.ink, letterSpacing: -0.36 }, // -0.02em
+  email: { fontSize: 14, fontWeight: '500', color: colors.textFaint },
+  menuRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 16, gap: 14 },
   menuLabel: { flex: 1, fontSize: 16, fontWeight: '500' },
-  divider: { height: 1, backgroundColor: colors.gray[100], marginLeft: 54 },
-  footer: { alignItems: 'center', marginTop: 24 },
-  footerText: { fontSize: 13, color: colors.gray[400] },
-  deleteBody: { paddingBottom: 16, gap: 16 },
+  divider: { height: 1, backgroundColor: colors.divider, marginLeft: 52 },
+  footer: { alignItems: 'center', marginTop: 26 },
+  footerText: { fontSize: 13, fontWeight: '500', color: colors.textDisabled },
+  deleteBody: { paddingBottom: 16, gap: 20 },
+  // 시안 07: "삭제" 입력 필드 — fieldBg + border
   deleteInput: {
-    marginTop: 8,
+    marginTop: 4,
     borderWidth: 1,
-    borderColor: colors.gray[200],
+    borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: colors.gray[900],
-    backgroundColor: colors.gray[50],
+    height: 52,
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.ink,
+    backgroundColor: colors.fieldBg,
   },
-  deleteButtonRow: { flexDirection: 'row', gap: 12 },
-  deleteCancelButton: {
-    flex: 1,
-    backgroundColor: colors.gray[100],
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  deleteCancelText: { fontSize: 16, fontWeight: '600', color: colors.gray[700] },
-  deleteConfirmButton: {
-    flex: 1,
-    backgroundColor: colors.destructive,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  deleteConfirmText: { fontSize: 16, fontWeight: '700', color: colors.white },
-  buttonDisabled: { opacity: 0.5 },
+  deleteButtonRow: { flexDirection: 'row', gap: 11 },
 });

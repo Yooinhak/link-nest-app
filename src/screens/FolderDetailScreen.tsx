@@ -14,11 +14,17 @@ import {
 } from 'react-native';
 
 import { RouteProp, useRoute } from '@react-navigation/native';
-import Svg, { Path } from 'react-native-svg';
 
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
+import {
+  ArrowUpDownIcon,
+  LayoutGridIcon,
+  ListIcon as ListGlyphIcon,
+  PlusIcon,
+  SearchIcon,
+} from '../components/icons';
 import Input from '../components/Input';
 import LinkPreviewCard, {
   type LinkPreviewCardHandle,
@@ -26,7 +32,7 @@ import LinkPreviewCard, {
   ViewMode,
 } from '../components/LinkPreviewCard';
 import { useToast } from '../components/Toast';
-import { colors } from '../constants/theme';
+import { colors, shadows } from '../constants/theme';
 import { useCreatePost, usePostsQuery, useUpdatePost } from '../hooks/queries';
 import { MainStackParamList } from '../navigation/types';
 import { mediumTap } from '../utils/haptics';
@@ -39,80 +45,6 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 type FolderDetailRouteProp = RouteProp<MainStackParamList, 'FolderDetail'>;
 type SortOrder = 'newest' | 'oldest';
-
-const PlusIcon = () => (
-  <Svg
-    width={18}
-    height={18}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={colors.white}
-    strokeWidth={2.5}
-    strokeLinecap="round"
-  >
-    <Path d="M12 5v14M5 12h14" />
-  </Svg>
-);
-
-const GridIcon = ({ active }: { active: boolean }) => (
-  <Svg
-    width={18}
-    height={18}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={active ? colors.primary : colors.gray[400]}
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <Path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />
-  </Svg>
-);
-
-const ListIcon = ({ active }: { active: boolean }) => (
-  <Svg
-    width={18}
-    height={18}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={active ? colors.primary : colors.gray[400]}
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <Path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-  </Svg>
-);
-
-const SearchIcon = () => (
-  <Svg
-    width={16}
-    height={16}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={colors.gray[400]}
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <Path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35" />
-  </Svg>
-);
-
-const SortIcon = () => (
-  <Svg
-    width={16}
-    height={16}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={colors.gray[600]}
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <Path d="m3 16 4 4 4-4M7 20V4M21 8l-4-4-4 4M17 4v16" />
-  </Svg>
-);
 
 export default function FolderDetailScreen() {
   const route = useRoute<FolderDetailRouteProp>();
@@ -249,11 +181,11 @@ export default function FolderDetailScreen() {
       {/* Search bar */}
       <View style={styles.searchRow}>
         <View style={styles.searchBar}>
-          <SearchIcon />
+          <SearchIcon size={16} color={colors.textDisabled} />
           <TextInput
             style={styles.searchInput}
             placeholder="링크 검색..."
-            placeholderTextColor={colors.gray[400]}
+            placeholderTextColor={colors.textDisabled}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCapitalize="none"
@@ -288,7 +220,7 @@ export default function FolderDetailScreen() {
             accessibilityRole="button"
             accessibilityLabel={`정렬 기준: ${sortOrder === 'newest' ? '최신순' : '오래된순'}`}
           >
-            <SortIcon />
+            <ArrowUpDownIcon size={15} color={colors.textMuted} />
             <Text style={styles.sortText}>{sortOrder === 'newest' ? '최신순' : '오래된순'}</Text>
           </TouchableOpacity>
           <View style={styles.viewToggle}>
@@ -300,7 +232,7 @@ export default function FolderDetailScreen() {
               accessibilityState={{ checked: viewMode === 'large' }}
               accessibilityLabel="큰 카드 보기"
             >
-              <GridIcon active={viewMode === 'large'} />
+              <LayoutGridIcon size={16} color={viewMode === 'large' ? colors.primary : colors.textDisabled} />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.viewToggleBtn, viewMode === 'compact' && styles.viewToggleBtnActive]}
@@ -310,7 +242,7 @@ export default function FolderDetailScreen() {
               accessibilityState={{ checked: viewMode === 'compact' }}
               accessibilityLabel="간단히 보기"
             >
-              <ListIcon active={viewMode === 'compact'} />
+              <ListGlyphIcon size={16} color={viewMode === 'compact' ? colors.primary : colors.textDisabled} />
             </TouchableOpacity>
           </View>
         </View>
@@ -356,7 +288,7 @@ export default function FolderDetailScreen() {
         accessibilityRole="button"
         accessibilityLabel="링크 추가"
       >
-        <PlusIcon />
+        <PlusIcon size={24} color={colors.white} strokeWidth={2.5} />
       </TouchableOpacity>
 
       {/* 링크 추가 바텀시트 */}
@@ -410,17 +342,17 @@ export default function FolderDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.bg },
   searchRow: {
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 6,
     paddingBottom: 4,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray[100],
+    backgroundColor: colors.divider,
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 40,
@@ -429,7 +361,8 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: colors.gray[900],
+    fontWeight: '500',
+    color: colors.ink,
     paddingVertical: 0,
   },
   searchClear: {
@@ -443,10 +376,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 8,
-    paddingBottom: 8,
-    backgroundColor: colors.white,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.gray[200],
+    paddingBottom: 10,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
   },
   countLeft: {
     flexDirection: 'row',
@@ -468,24 +401,24 @@ const styles = StyleSheet.create({
   sortText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.gray[600],
+    color: colors.textMuted,
   },
   viewToggle: {
     flexDirection: 'row',
-    backgroundColor: colors.gray[100],
+    backgroundColor: colors.divider,
     borderRadius: 10,
     padding: 2,
   },
   viewToggleBtn: {
-    width: 34,
-    height: 30,
+    width: 32,
+    height: 28,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   viewToggleBtnActive: {
-    backgroundColor: colors.white,
-    shadowColor: colors.black,
+    backgroundColor: colors.surface,
+    shadowColor: '#141E37',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 2,
@@ -493,7 +426,7 @@ const styles = StyleSheet.create({
   },
   countBadge: {
     backgroundColor: colors.primary,
-    borderRadius: 10,
+    borderRadius: 11,
     minWidth: 22,
     height: 22,
     alignItems: 'center',
@@ -505,24 +438,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.white,
   },
-  countText: { fontSize: 14, color: colors.gray[600], fontWeight: '600' },
-  list: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 100 },
+  countText: { fontSize: 14, color: colors.textMuted, fontWeight: '600' },
+  list: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 100 },
   form: { gap: 16 },
-  sheetBtns: { flexDirection: 'row', gap: 10, marginTop: 20, marginBottom: 8 },
+  sheetBtns: { flexDirection: 'row', gap: 10, marginTop: 26, marginBottom: 8 },
   fab: {
     position: 'absolute',
-    bottom: 32,
-    right: 24,
+    bottom: 30,
+    right: 20,
     width: 56,
     height: 56,
     borderRadius: 28,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    ...shadows.fab,
   },
 });

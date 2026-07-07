@@ -14,8 +14,8 @@ export default function Input({ label, error, style, ...props }: InputProps) {
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
       <TextInput
-        style={[styles.input, error && styles.inputError, style]}
-        placeholderTextColor={colors.gray[400]}
+        style={[styles.input, error ? styles.inputError : undefined, style]}
+        placeholderTextColor={colors.textDisabled}
         {...props}
       />
       {error && <Text style={styles.error}>{error}</Text>}
@@ -30,23 +30,24 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.gray[700],
+    color: colors.textSub,
     marginLeft: 4,
   },
   input: {
-    backgroundColor: colors.gray[100],
+    backgroundColor: colors.divider,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontSize: 16,
-    color: colors.gray[900],
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.ink,
   },
   inputError: {
     backgroundColor: colors.destructiveLight,
   },
   error: {
     fontSize: 12,
-    color: colors.destructive,
+    color: colors.danger,
     marginLeft: 4,
   },
 });

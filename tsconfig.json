@@ -3,16 +3,7 @@
   "compilerOptions": {
     "strict": true,
     "skipLibCheck": true,
-    "types": ["react", "react-native"],
-    "baseUrl": ".",
-    "paths": {
-      "@components/*": ["src/components/*"],
-      "@screens/*": ["src/screens/*"],
-      "@utils/*": ["src/utils/*"],
-      "@hooks/*": ["src/hooks/*"],
-      "@constants/*": ["src/constants/*"],
-      "@navigation/*": ["src/navigation/*"]
-    }
+    "types": ["react", "react-native"]
   },
   "exclude": [
     "node_modules",

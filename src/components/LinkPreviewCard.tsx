@@ -16,7 +16,7 @@ import Reanimated, {
 import Svg, { Path } from 'react-native-svg';
 import { runOnJS } from 'react-native-worklets';
 
-import { colors } from '../constants/theme';
+import { colors, shadows } from '../constants/theme';
 import { useDeferredDeletePost } from '../hooks/queries';
 import { selectionTap, warningTap } from '../utils/haptics';
 import { parseMetadata } from '../utils/parseMetadata';
@@ -98,7 +98,7 @@ export function LinkPreviewCardSkeleton({ viewMode = 'large' }: { viewMode?: Vie
   if (viewMode === 'compact') {
     return (
       <View style={compactStyles.card}>
-        <Skeleton width={56} height={56} borderRadius={10} />
+        <Skeleton width={40} height={40} borderRadius={11} />
         <View style={compactStyles.body}>
           <Skeleton width="70%" height={15} />
           <Skeleton width="50%" height={12} />
@@ -109,7 +109,7 @@ export function LinkPreviewCardSkeleton({ viewMode = 'large' }: { viewMode?: Vie
 
   return (
     <View style={styles.card}>
-      <Skeleton width="100%" height={160} borderRadius={12} />
+      <Skeleton width="100%" height={120} borderRadius={12} />
       <View style={styles.body}>
         <Skeleton width="70%" height={16} />
         <Skeleton width="100%" height={14} />
@@ -235,7 +235,7 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
       >
         {/* Compact Thumbnail */}
         {isLoading ? (
-          <Skeleton width={56} height={56} borderRadius={10} />
+          <Skeleton width={40} height={40} borderRadius={11} />
         ) : metadata?.image && !imageFailed ? (
           <Image
             source={{ uri: metadata.image }}
@@ -317,7 +317,7 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
       >
         {/* Thumbnail */}
         {isLoading ? (
-          <Skeleton width="100%" height={160} borderRadius={12} />
+          <Skeleton width="100%" height={120} borderRadius={12} />
         ) : metadata?.image && !imageFailed ? (
           <Image
             source={{ uri: metadata.image }}
@@ -328,8 +328,11 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
             onError={() => setImageFailed(true)}
           />
         ) : (
+          // 시안 04: 메타 이미지가 없으면 틴트 배경 + 흰 이니셜 타일 (그라데이션 근사)
           <View style={styles.thumbnailFallback}>
-            <Text style={styles.thumbnailFallbackText}>{domain.charAt(0).toUpperCase()}</Text>
+            <View style={styles.thumbnailFallbackTile}>
+              <Text style={styles.thumbnailFallbackText}>{domain.charAt(0).toUpperCase()}</Text>
+            </View>
           </View>
         )}
 
@@ -448,43 +451,47 @@ const compactStyles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: 14,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 13,
     gap: 12,
+    ...shadows.card,
   },
   thumbnail: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: colors.gray[100],
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    backgroundColor: colors.divider,
   },
   thumbnailFallback: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: colors.gray[100],
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    backgroundColor: colors.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
   thumbnailFallbackText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.gray[300],
+    fontSize: 17,
+    fontWeight: '800',
+    color: colors.primary,
   },
   body: {
     flex: 1,
+    minWidth: 0,
     gap: 3,
   },
   title: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.gray[900],
-    letterSpacing: -0.3,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.ink,
+    letterSpacing: -0.28, // -0.02em
   },
   domain: {
-    fontSize: 12,
-    color: colors.gray[400],
+    fontSize: 11,
+    fontWeight: '500',
+    color: colors.textDisabled,
   },
   memo: {
     fontSize: 12,
@@ -500,67 +507,89 @@ const compactStyles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: colors.gray[50],
+    backgroundColor: colors.fieldBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
 });
 
 const styles = StyleSheet.create({
+  // 그림자와 클리핑 공존: overflow hidden 은 iOS 그림자를 죽이므로
+  // 카드에는 그림자만 두고, 썸네일에 상단 radius 를 직접 지정한다.
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: 16,
-    overflow: 'hidden',
+    ...shadows.bigCard,
   },
   thumbnail: {
     width: '100%',
-    height: 160,
-    backgroundColor: colors.gray[100],
+    height: 120,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    backgroundColor: colors.divider,
   },
   thumbnailFallback: {
     width: '100%',
-    height: 100,
-    backgroundColor: colors.gray[100],
+    height: 120,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    backgroundColor: colors.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  thumbnailFallbackTile: {
+    width: 48,
+    height: 48,
+    borderRadius: 13,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#141E37',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 3,
+  },
   thumbnailFallbackText: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: colors.gray[300],
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.primary,
   },
   body: {
-    padding: 16,
+    paddingVertical: 13,
+    paddingHorizontal: 15,
     gap: 6,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.gray[900],
-    letterSpacing: -0.3,
-    lineHeight: 22,
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.ink,
+    letterSpacing: -0.3, // -0.02em
+    lineHeight: 21,
   },
   description: {
-    fontSize: 14,
-    color: colors.gray[500],
-    lineHeight: 20,
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textFaint,
+    lineHeight: 19,
   },
   domain: {
     fontSize: 12,
-    color: colors.gray[400],
+    fontWeight: '500',
+    color: colors.textDisabled,
     marginTop: 2,
   },
   memo: {
-    backgroundColor: colors.blue[50],
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginTop: 8,
+    backgroundColor: colors.primaryTint,
+    borderRadius: 9,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    marginTop: 6,
   },
   memoText: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.primary,
-    lineHeight: 18,
+    lineHeight: 17,
     fontWeight: '500',
   },
   topActions: {

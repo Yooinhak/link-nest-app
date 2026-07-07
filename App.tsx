@@ -1,13 +1,12 @@
-import './global.css';
-
 import React from 'react';
 
 import { QueryClientProvider } from '@tanstack/react-query';
+import { ShareIntentProvider } from 'expo-share-intent';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ShareIntentProvider } from 'expo-share-intent';
 
+import AnimatedSplash from './src/components/AnimatedSplash';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { ToastProvider } from './src/components/Toast';
 import RootNavigator from './src/navigation/RootNavigator';
@@ -26,6 +25,7 @@ export default function App() {
               <ToastProvider>
                 <StatusBar style="auto" />
                 <RootNavigator />
+                <AnimatedSplash />
               </ToastProvider>
             </QueryClientProvider>
           </SafeAreaProvider>

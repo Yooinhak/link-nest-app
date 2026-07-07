@@ -1,6 +1,6 @@
 export type MainStackParamList = {
   MainTabs: undefined;
-  FolderDetail: { folderId: string; folderName: string };
+  FolderDetail: { folderId: string; folderName: string; folderColor?: string };
 };
 
 export type TabParamList = {

@@ -3,10 +3,11 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 
 import { colors } from '../constants/theme';
 import { successTap, warningTap } from '../utils/haptics';
+
+import { CheckIcon, XIcon } from './icons';
 
 type ToastType = 'success' | 'error';
 
@@ -35,17 +36,6 @@ export function useToast() {
   return context;
 }
 
-const CheckIcon = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.white} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M20 6 9 17l-5-5" />
-  </Svg>
-);
-
-const XIcon = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.white} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M18 6 6 18M6 6l12 12" />
-  </Svg>
-);
 
 function ToastItem({ toast, onDone }: { toast: ToastMessage; onDone: (id: number) => void }) {
   const opacity = useRef(new Animated.Value(0)).current;
@@ -87,7 +77,11 @@ function ToastItem({ toast, onDone }: { toast: ToastMessage; onDone: (id: number
       accessibilityLabel={toast.message}
     >
       <View style={[styles.iconWrap, { backgroundColor: isSuccess ? colors.success : colors.destructive }]} importantForAccessibility="no-hide-descendants">
-        {isSuccess ? <CheckIcon /> : <XIcon />}
+        {isSuccess ? (
+          <CheckIcon size={16} color={colors.white} strokeWidth={2.5} />
+        ) : (
+          <XIcon size={16} color={colors.white} strokeWidth={2.5} />
+        )}
       </View>
       <Text style={styles.toastText}>{toast.message}</Text>
       {toast.action && (
