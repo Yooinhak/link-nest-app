@@ -18,11 +18,13 @@ import { runOnJS } from 'react-native-worklets';
 
 import { colors, shadows } from '../constants/theme';
 import { useDeferredDeletePost } from '../hooks/queries';
+import { getDomainInfo } from '../utils/domainInfo';
 import { selectionTap, warningTap } from '../utils/haptics';
 import { parseMetadata } from '../utils/parseMetadata';
 import { queryKeys } from '../utils/react-query/queryKeys';
 
 import AlertDialog from './AlertDialog';
+import FaviconBadge from './FaviconBadge';
 import Skeleton from './Skeleton';
 
 export type ViewMode = 'large' | 'compact';
@@ -224,6 +226,9 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
     }
   })();
 
+  // 표시용 서비스명 — 알려진 서비스는 브랜드명(YouTube, 티스토리 등), 그 외엔 도메인
+  const domainLabel = getDomainInfo(url)?.label ?? domain;
+
   const cardContent =
     viewMode === 'compact' ? (
       <TouchableOpacity
@@ -263,9 +268,12 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
               <Text style={compactStyles.title} numberOfLines={1}>
                 {metadata?.title || domain}
               </Text>
-              <Text style={compactStyles.domain} numberOfLines={1}>
-                {domain}
-              </Text>
+              <View style={compactStyles.domainRow}>
+                <FaviconBadge url={url} size={13} />
+                <Text style={compactStyles.domain} numberOfLines={1}>
+                  {domainLabel}
+                </Text>
+              </View>
               {userDescription && (
                 <Text style={compactStyles.memo} numberOfLines={1}>
                   {userDescription}
@@ -353,7 +361,12 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
                   {metadata.description}
                 </Text>
               )}
-              <Text style={styles.domain}>{domain}</Text>
+              <View style={styles.domainRow}>
+                <FaviconBadge url={url} size={16} />
+                <Text style={styles.domain} numberOfLines={1}>
+                  {domainLabel}
+                </Text>
+              </View>
             </>
           )}
 
@@ -488,7 +501,13 @@ const compactStyles = StyleSheet.create({
     color: colors.ink,
     letterSpacing: -0.28, // -0.02em
   },
+  domainRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
   domain: {
+    flex: 1,
     fontSize: 11,
     fontWeight: '500',
     color: colors.textDisabled,
@@ -573,11 +592,17 @@ const styles = StyleSheet.create({
     color: colors.textFaint,
     lineHeight: 19,
   },
+  domainRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
   domain: {
+    flexShrink: 1,
     fontSize: 12,
     fontWeight: '500',
     color: colors.textDisabled,
-    marginTop: 2,
   },
   memo: {
     backgroundColor: colors.primaryTint,
