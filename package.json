@@ -25,11 +25,12 @@
     "expo": "~55.0.4",
     "expo-apple-authentication": "~8.0.7",
     "expo-auth-session": "^55.0.6",
+    "expo-dev-client": "~55.0.36",
     "expo-haptics": "^55.0.9",
     "expo-image": "^55.0.5",
     "expo-linking": "^55.0.7",
     "expo-share-intent": "^6.0.0",
-    "expo-splash-screen": "^57.0.1",
+    "expo-splash-screen": "~55.0.22",
     "expo-status-bar": "~55.0.4",
     "expo-web-browser": "^55.0.9",
     "nativewind": "^4.2.2",
@@ -57,5 +58,12 @@
     "prettier": "^3.8.3",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "autolinking": {
+      "exclude": [
+        "expo-apple-authentication"
+      ]
+    }
+  }
 }
