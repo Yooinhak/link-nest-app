@@ -7,6 +7,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import OfflineBanner from '../components/OfflineBanner';
 import { colors, getFolderColor } from '../constants/theme';
 import FolderDetailScreen from '../screens/FolderDetailScreen';
+import MemberManageScreen from '../screens/MemberManageScreen';
 
 import TabNavigator from './TabNavigator';
 import { MainStackParamList } from './types';
@@ -53,6 +54,15 @@ export default function MainStack() {
             headerLargeTitle: false,
             headerBackTitleVisible: false,
           })}
+        />
+        <Stack.Screen
+          name="MemberManage"
+          component={MemberManageScreen}
+          options={{
+            title: '멤버 관리',
+            headerStyle: { backgroundColor: colors.bg },
+            headerShadowVisible: false,
+          }}
         />
       </Stack.Navigator>
     </View>

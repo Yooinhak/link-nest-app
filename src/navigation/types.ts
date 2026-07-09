@@ -1,6 +1,7 @@
 export type MainStackParamList = {
   MainTabs: undefined;
   FolderDetail: { folderId: string; folderName: string; folderColor?: string };
+  MemberManage: { groupId: string };
 };
 
 export type TabParamList = {

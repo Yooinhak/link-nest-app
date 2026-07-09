@@ -10,7 +10,8 @@
     "lint": "eslint 'src/**/*.{ts,tsx}' --max-warnings 0",
     "lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
     "format": "prettier --write 'src/**/*.{ts,tsx}'",
-    "format:check": "prettier --check 'src/**/*.{ts,tsx}'"
+    "format:check": "prettier --check 'src/**/*.{ts,tsx}'",
+    "update-types": "npx supabase gen types typescript --project-id yvhyjxdxksdddunjmjdo --schema public > src/utils/supabase/types.ts"
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "^5.2.8",
@@ -25,6 +26,7 @@
     "expo": "~55.0.4",
     "expo-apple-authentication": "~8.0.7",
     "expo-auth-session": "^55.0.6",
+    "expo-clipboard": "~55.0.14",
     "expo-dev-client": "~55.0.36",
     "expo-haptics": "^55.0.9",
     "expo-image": "^55.0.5",

@@ -22,8 +22,10 @@ import { getDomainInfo } from '../utils/domainInfo';
 import { selectionTap, warningTap } from '../utils/haptics';
 import { parseMetadata } from '../utils/parseMetadata';
 import { queryKeys } from '../utils/react-query/queryKeys';
+import { relativeTime } from '../utils/relativeTime';
 
 import AlertDialog from './AlertDialog';
+import { Avatar } from './AvatarStack';
 import FaviconBadge from './FaviconBadge';
 import Skeleton from './Skeleton';
 
@@ -41,6 +43,15 @@ interface LinkPreviewCardProps {
   viewMode?: ViewMode;
   onEditPress?: (id: number, description: string | null) => void;
   onSwipeStart?: (handle: LinkPreviewCardHandle) => void;
+  /** viewer 권한이면 false — 스와이프 삭제/메모 수정 진입점 전부 숨김 (시안 권한 규칙) */
+  canEdit?: boolean;
+  /** 시안 ⑦ "추가한 사람" — 공유 그룹에서만 전달 (개인 그룹 = 미표시).
+   *  memo 최적화를 위해 원시값으로 받는다. */
+  addedByUserId?: string | null;
+  addedByName?: string | null;
+  addedByAvatar?: string | null;
+  addedByIsMine?: boolean;
+  createdAt?: string | null;
 }
 
 const RIGHT_ACTION_WIDTH = 80;
@@ -169,7 +180,21 @@ function RightAction({ translation, onPress }: { translation: SharedValue<number
 }
 
 const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(function LinkPreviewCard(
-  { id, url, userDescription, folderId, viewMode = 'large', onEditPress, onSwipeStart },
+  {
+    id,
+    url,
+    userDescription,
+    folderId,
+    viewMode = 'large',
+    onEditPress,
+    onSwipeStart,
+    canEdit = true,
+    addedByUserId = null,
+    addedByName = null,
+    addedByAvatar = null,
+    addedByIsMine = false,
+    createdAt = null,
+  },
   ref,
 ) {
   const [deleteVisible, setDeleteVisible] = useState(false);
@@ -273,6 +298,13 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
                 <Text style={compactStyles.domain} numberOfLines={1}>
                   {domainLabel}
                 </Text>
+                {/* 시안 ⑦: compact 는 추가한 사람 아바타만 */}
+                {addedByUserId && (
+                  <Avatar
+                    member={{ userId: addedByUserId, displayName: addedByName, avatarUrl: addedByAvatar }}
+                    size={14}
+                  />
+                )}
               </View>
               {userDescription && (
                 <Text style={compactStyles.memo} numberOfLines={1}>
@@ -283,37 +315,39 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
           )}
         </View>
 
-        {/* Action buttons */}
-        <View style={compactStyles.actions}>
-          {onEditPress && (
+        {/* Action buttons — viewer 는 전부 숨김 */}
+        {canEdit && (
+          <View style={compactStyles.actions}>
+            {onEditPress && (
+              <TouchableOpacity
+                style={compactStyles.actionBtn}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onEditPress(id, userDescription);
+                }}
+                activeOpacity={0.5}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="메모 수정"
+              >
+                <PenIcon />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={compactStyles.actionBtn}
               onPress={(e) => {
                 e.stopPropagation();
-                onEditPress(id, userDescription);
+                setDeleteVisible(true);
               }}
               activeOpacity={0.5}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
-              accessibilityLabel="메모 수정"
+              accessibilityLabel="링크 삭제"
             >
-              <PenIcon />
+              <TrashIcon />
             </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={compactStyles.actionBtn}
-            onPress={(e) => {
-              e.stopPropagation();
-              setDeleteVisible(true);
-            }}
-            activeOpacity={0.5}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityRole="button"
-            accessibilityLabel="링크 삭제"
-          >
-            <TrashIcon />
-          </TouchableOpacity>
-        </View>
+          </View>
+        )}
       </TouchableOpacity>
     ) : (
       <TouchableOpacity
@@ -377,41 +411,63 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
               </Text>
             </View>
           )}
+
+          {/* 시안 ⑦: 추가한 사람 푸터 — 공유 그룹에서만. 내가 추가한 링크는 이름 생략 */}
+          {addedByUserId && (
+            <View style={styles.addedByRow}>
+              <Avatar
+                member={{ userId: addedByUserId, displayName: addedByName, avatarUrl: addedByAvatar }}
+                size={18}
+              />
+              <Text style={styles.addedByText} numberOfLines={1}>
+                {addedByIsMine
+                  ? relativeTime(createdAt)
+                  : `${addedByName ?? '멤버'}님이 추가 · ${relativeTime(createdAt)}`}
+              </Text>
+            </View>
+          )}
         </View>
 
-        {/* Top-right action buttons */}
-        <View style={styles.topActions}>
-          {onEditPress && (
+        {/* Top-right action buttons — viewer 는 전부 숨김 */}
+        {canEdit && (
+          <View style={styles.topActions}>
+            {onEditPress && (
+              <TouchableOpacity
+                style={styles.actionBtnOverlay}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onEditPress(id, userDescription);
+                }}
+                activeOpacity={0.5}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="메모 수정"
+              >
+                <PenIcon />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={styles.actionBtnOverlay}
               onPress={(e) => {
                 e.stopPropagation();
-                onEditPress(id, userDescription);
+                setDeleteVisible(true);
               }}
               activeOpacity={0.5}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
-              accessibilityLabel="메모 수정"
+              accessibilityLabel="링크 삭제"
             >
-              <PenIcon />
+              <TrashIcon />
             </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={styles.actionBtnOverlay}
-            onPress={(e) => {
-              e.stopPropagation();
-              setDeleteVisible(true);
-            }}
-            activeOpacity={0.5}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityRole="button"
-            accessibilityLabel="링크 삭제"
-          >
-            <TrashIcon />
-          </TouchableOpacity>
-        </View>
+          </View>
+        )}
       </TouchableOpacity>
     );
+
+  // viewer 는 스와이프 삭제도 비노출 — Swipeable 래핑 자체를 생략
+  if (!canEdit) {
+    return cardContent;
+  }
 
   return (
     <>
@@ -616,6 +672,21 @@ const styles = StyleSheet.create({
     color: colors.primary,
     lineHeight: 17,
     fontWeight: '500',
+  },
+  addedByRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
+  addedByText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textFaint,
   },
   topActions: {
     position: 'absolute',

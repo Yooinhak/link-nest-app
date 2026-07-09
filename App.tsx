@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AnimatedSplash from './src/components/AnimatedSplash';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { ToastProvider } from './src/components/Toast';
+import { GroupProvider } from './src/contexts/GroupContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/utils/react-query/queryClient';
 import { initSentry } from './src/utils/sentry';
@@ -23,8 +24,10 @@ export default function App() {
           <SafeAreaProvider>
             <QueryClientProvider client={queryClient}>
               <ToastProvider>
-                <StatusBar style="auto" />
-                <RootNavigator />
+                <GroupProvider>
+                  <StatusBar style="auto" />
+                  <RootNavigator />
+                </GroupProvider>
                 <AnimatedSplash />
               </ToastProvider>
             </QueryClientProvider>

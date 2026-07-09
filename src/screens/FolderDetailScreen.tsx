@@ -33,7 +33,9 @@ import LinkPreviewCard, {
 } from '../components/LinkPreviewCard';
 import { useToast } from '../components/Toast';
 import { colors, shadows } from '../constants/theme';
-import { useCreatePost, usePostsQuery, useUpdatePost } from '../hooks/queries';
+import { useGroup } from '../contexts/GroupContext';
+import { useCreatePost, useGroupMembersQuery, usePostsQuery, useUpdatePost } from '../hooks/queries';
+import { useAuth } from '../hooks/useAuth';
 import { MainStackParamList } from '../navigation/types';
 import { mediumTap } from '../utils/haptics';
 import { isValidUrl } from '../utils/validateUrl';
@@ -143,6 +145,14 @@ export default function FolderDetailScreen() {
     setEditVisible(true);
   }, []);
 
+  // ── 그룹 권한 + 멤버 정보 (시안 권한 규칙 / ⑦ 추가한 사람) ──
+  const { myRole, isPersonal, currentGroupId } = useGroup();
+  const canEdit = myRole !== 'viewer';
+  const { session } = useAuth();
+  const myUserId = session?.user?.id ?? null;
+  const { data: members = [] } = useGroupMembersQuery(!isPersonal ? currentGroupId : null);
+  const memberMap = useMemo(() => new Map(members.map((m) => [m.userId, m])), [members]);
+
   // iOS Mail 패턴: 한 번에 한 카드만 열린 상태로 유지.
   // 카드가 스와이프 시작 시 자신의 핸들을 전달하며, 이전 카드를 닫는다.
   const lastOpenedRef = useRef<LinkPreviewCardHandle | null>(null);
@@ -156,18 +166,31 @@ export default function FolderDetailScreen() {
   // B-5: FlatList 렌더 최적화 — renderItem/keyExtractor/ItemSeparator 를 useCallback 으로 안정화.
   // React.memo 된 LinkPreviewCard 가 불필요하게 리렌더되지 않도록 한다.
   const renderItem = useCallback(
-    ({ item }: { item: { id: number; url: string; description: string | null } }) => (
-      <LinkPreviewCard
-        id={item.id}
-        url={item.url}
-        userDescription={item.description}
-        folderId={folderId}
-        viewMode={viewMode}
-        onEditPress={handleEditPress}
-        onSwipeStart={handleSwipeStart}
-      />
-    ),
-    [folderId, viewMode, handleEditPress, handleSwipeStart],
+    ({
+      item,
+    }: {
+      item: { id: number; url: string; description: string | null; user_id: string | null; created_at: string | null };
+    }) => {
+      const member = !isPersonal && item.user_id ? memberMap.get(item.user_id) : undefined;
+      return (
+        <LinkPreviewCard
+          id={item.id}
+          url={item.url}
+          userDescription={item.description}
+          folderId={folderId}
+          viewMode={viewMode}
+          onEditPress={canEdit ? handleEditPress : undefined}
+          onSwipeStart={handleSwipeStart}
+          canEdit={canEdit}
+          addedByUserId={!isPersonal ? item.user_id : null}
+          addedByName={member?.displayName ?? null}
+          addedByAvatar={member?.avatarUrl ?? null}
+          addedByIsMine={item.user_id === myUserId}
+          createdAt={item.created_at}
+        />
+      );
+    },
+    [folderId, viewMode, handleEditPress, handleSwipeStart, canEdit, isPersonal, memberMap, myUserId],
   );
 
   const keyExtractor = useCallback((item: { id: number }) => String(item.id), []);
@@ -271,25 +294,36 @@ export default function FolderDetailScreen() {
             searchQuery ? (
               <EmptyState type="search" title="검색 결과가 없어요" subtitle="다른 키워드로 검색해보세요" />
             ) : (
-              <EmptyState type="link" title="아직 링크가 없어요" subtitle="아래 버튼으로 링크를 추가해보세요" />
+              <EmptyState
+                type="link"
+                title="아직 링크가 없어요"
+                subtitle={
+                  !isPersonal
+                    ? '첫 링크를 함께 모아보세요'
+                    : '아래 버튼으로 링크를 추가해보세요'
+                }
+              />
             )
           }
         />
       )}
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => {
-          setPostUrl('');
-          setPostDescription('');
-          setCreateVisible(true);
-        }}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        accessibilityLabel="링크 추가"
-      >
-        <PlusIcon size={24} color={colors.white} strokeWidth={2.5} />
-      </TouchableOpacity>
+      {/* viewer 는 링크 추가 FAB 숨김 (시안 권한 규칙) */}
+      {canEdit && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => {
+            setPostUrl('');
+            setPostDescription('');
+            setCreateVisible(true);
+          }}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="링크 추가"
+        >
+          <PlusIcon size={24} color={colors.white} strokeWidth={2.5} />
+        </TouchableOpacity>
+      )}
 
       {/* 링크 추가 바텀시트 */}
       <BottomSheet visible={createVisible} onClose={() => setCreateVisible(false)} title="링크 추가">

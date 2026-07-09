@@ -6,24 +6,50 @@ import { useToast } from '../../components/Toast';
 import { queryKeys } from '../../utils/react-query/queryKeys';
 import { supabase } from '../../utils/supabase/client';
 
+// ⚠️ 그룹 모델 전환 (001_groups_sharing.sql): 폴더는 항상 그룹에 소속.
+// 조회/생성은 groupId 필수, 캐시 키는 [FOLDER_LIST, groupId].
+
 // --- Query ---
-export function useFoldersQuery() {
+export function useFoldersQuery(groupId: string | null) {
   return useQuery({
-    queryKey: [queryKeys.FOLDER_LIST],
+    queryKey: [queryKeys.FOLDER_LIST, groupId],
+    enabled: !!groupId,
     queryFn: async () =>
-      await supabase.from('folders').select('*, posts(count)').order('created_at', { ascending: false }),
+      await supabase
+        .from('folders')
+        .select('*, posts(count)')
+        .eq('group_id', groupId!)
+        .order('created_at', { ascending: false }),
+    select: (data) => data.data,
+  });
+}
+
+/**
+ * 내가 속한 모든 그룹의 폴더 (공유 인텐트 저장 시트 ⑥ — 그룹별 섹션 그룹핑용).
+ * RLS가 멤버십 기준으로 필터하므로 조건 없이 전체 조회하면 된다.
+ */
+export function useAllFoldersQuery(enabled = true) {
+  return useQuery({
+    queryKey: [queryKeys.FOLDER_LIST, 'all'],
+    enabled,
+    queryFn: async () =>
+      await supabase
+        .from('folders')
+        .select('*, group:groups(id, name, emoji, type)')
+        .order('created_at', { ascending: false }),
     select: (data) => data.data,
   });
 }
 
 // --- Mutations ---
-export function useCreateFolder() {
+export function useCreateFolder(groupId: string | null) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
   return useMutation({
     mutationFn: async (params: { name: string; color: string }) => {
-      const { error } = await supabase.from('folders').insert(params);
+      if (!groupId) throw new Error('NO_GROUP');
+      const { error } = await supabase.from('folders').insert({ ...params, group_id: groupId });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -36,7 +62,7 @@ export function useCreateFolder() {
   });
 }
 
-export function useUpdateFolder() {
+export function useUpdateFolder(groupId: string | null) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
@@ -47,7 +73,8 @@ export function useUpdateFolder() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [queryKeys.FOLDER_LIST] });
+      queryClient.invalidateQueries({ queryKey: [queryKeys.FOLDER_LIST, groupId] });
+      queryClient.invalidateQueries({ queryKey: [queryKeys.FOLDER_LIST, 'all'] });
       showToast('success', '폴더가 수정되었어요');
     },
     onError: () => {
@@ -56,9 +83,10 @@ export function useUpdateFolder() {
   });
 }
 
-export function useDeleteFolder() {
+export function useDeleteFolder(groupId: string | null) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const listKey = [queryKeys.FOLDER_LIST, groupId];
 
   return useMutation({
     mutationFn: async (id: number) => {
@@ -66,9 +94,9 @@ export function useDeleteFolder() {
       if (error) throw error;
     },
     onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: [queryKeys.FOLDER_LIST] });
-      const previous = queryClient.getQueryData([queryKeys.FOLDER_LIST]);
-      queryClient.setQueryData([queryKeys.FOLDER_LIST], (old: any) => {
+      await queryClient.cancelQueries({ queryKey: listKey });
+      const previous = queryClient.getQueryData(listKey);
+      queryClient.setQueryData(listKey, (old: any) => {
         if (!old?.data) return old;
         return { ...old, data: old.data.filter((f: any) => f.id !== id) };
       });
@@ -76,7 +104,7 @@ export function useDeleteFolder() {
     },
     onError: (_err, _id, context) => {
       if (context?.previous) {
-        queryClient.setQueryData([queryKeys.FOLDER_LIST], context.previous);
+        queryClient.setQueryData(listKey, context.previous);
       }
       showToast('error', '폴더 삭제에 실패했어요');
     },
@@ -93,59 +121,62 @@ export function useDeleteFolder() {
  * B-6: Undo 삭제 — 폴더를 즉시 DB에서 지우지 않고 낙관적 제거 후
  * 6초 Undo 토스트를 보여준다. 타임아웃 시 실제 삭제, Undo 시 복구.
  */
-export function useDeferredDeleteFolder() {
+export function useDeferredDeleteFolder(groupId: string | null) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const deleteFolder = useDeleteFolder();
+  const deleteFolder = useDeleteFolder(groupId);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const execute = useCallback((id: number) => {
-    // 1. 낙관적으로 캐시에서 제거
-    const previous = queryClient.getQueryData([queryKeys.FOLDER_LIST]);
-    queryClient.setQueryData([queryKeys.FOLDER_LIST], (old: any) => {
-      if (!old?.data) return old;
-      return { ...old, data: old.data.filter((f: any) => f.id !== id) };
-    });
+  const execute = useCallback(
+    (id: number) => {
+      const listKey = [queryKeys.FOLDER_LIST, groupId];
 
-    // 기존 타이머가 있으면 정리
-    if (timerRef.current) clearTimeout(timerRef.current);
+      // 1. 낙관적으로 캐시에서 제거
+      const previous = queryClient.getQueryData(listKey);
+      queryClient.setQueryData(listKey, (old: any) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.filter((f: any) => f.id !== id) };
+      });
 
-    let undone = false;
+      // 기존 타이머가 있으면 정리
+      if (timerRef.current) clearTimeout(timerRef.current);
 
-    // 2. Undo 토스트 (6초)
-    showToast('success', '폴더가 삭제되었어요', {
-      duration: 6000,
-      action: {
-        label: '실행 취소',
-        onPress: () => {
-          undone = true;
-          if (timerRef.current) clearTimeout(timerRef.current);
-          // 캐시 복구
-          if (previous) {
-            queryClient.setQueryData([queryKeys.FOLDER_LIST], previous);
-          }
-          showToast('success', '삭제가 취소되었어요');
-        },
-      },
-    });
+      let undone = false;
 
-    // 3. 6초 후 실제 삭제
-    timerRef.current = setTimeout(() => {
-      if (!undone) {
-        supabase.from('folders').delete().eq('id', id).then(({ error }) => {
-          if (error) {
-            // 실패 시 캐시 복구
+      // 2. Undo 토스트 (6초)
+      showToast('success', '폴더가 삭제되었어요', {
+        duration: 6000,
+        action: {
+          label: '실행 취소',
+          onPress: () => {
+            undone = true;
+            if (timerRef.current) clearTimeout(timerRef.current);
             if (previous) {
-              queryClient.setQueryData([queryKeys.FOLDER_LIST], previous);
+              queryClient.setQueryData(listKey, previous);
             }
-            showToast('error', '폴더 삭제에 실패했어요');
-          }
-          queryClient.invalidateQueries({ queryKey: [queryKeys.FOLDER_LIST] });
-        });
-      }
-      timerRef.current = null;
-    }, 6000);
-  }, [queryClient, showToast]);
+            showToast('success', '삭제가 취소되었어요');
+          },
+        },
+      });
+
+      // 3. 6초 후 실제 삭제
+      timerRef.current = setTimeout(() => {
+        if (!undone) {
+          supabase.from('folders').delete().eq('id', id).then(({ error }) => {
+            if (error) {
+              if (previous) {
+                queryClient.setQueryData(listKey, previous);
+              }
+              showToast('error', '폴더 삭제에 실패했어요');
+            }
+            queryClient.invalidateQueries({ queryKey: [queryKeys.FOLDER_LIST] });
+          });
+        }
+        timerRef.current = null;
+      }, 6000);
+    },
+    [queryClient, showToast, groupId],
+  );
 
   return { execute, isPending: deleteFolder.isPending };
 }
