@@ -1,6 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { Dimensions, LayoutChangeEvent, Modal, StyleSheet, Text, View } from 'react-native';
+import {
+  Dimensions,
+  KeyboardAvoidingView,
+  LayoutChangeEvent,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import BottomSheetInline, {
   BottomSheetBackdrop,
@@ -105,41 +114,49 @@ export default function BottomSheet({
       statusBarTranslucent
       navigationBarTranslucent
     >
-      <GestureHandlerRootView style={styles.rootView}>
-        <BottomSheetInline
-          ref={ref}
-          index={0}
-          snapPoints={snapPoints}
-          enableDynamicSizing={false}
-          enablePanDownToClose
-          onClose={handleClose}
-          keyboardBehavior="interactive"
-          keyboardBlurBehavior="restore"
-          android_keyboardInputMode="adjustResize"
-          backdropComponent={renderBackdrop}
-          backgroundStyle={styles.sheetBg}
-          handleIndicatorStyle={styles.handle}
-          style={styles.sheetShadow}
-        >
-          <BottomSheetScrollView
-            contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
+      {/* Android: gorhom 의 adjustResize 는 액티비티 창 기준이라 Modal(별도 창)에서는
+          동작하지 않는다 → 이벤트 기반 KeyboardAvoidingView(padding)로 시트를 밀어올린다.
+          iOS 는 gorhom interactive 가 담당하므로 KAV 비활성(이중 이동 방지). */}
+      <KeyboardAvoidingView
+        style={styles.rootView}
+        behavior="padding"
+        enabled={Platform.OS === 'android'}
+      >
+        <GestureHandlerRootView style={styles.rootView}>
+          <BottomSheetInline
+            ref={ref}
+            index={0}
+            snapPoints={snapPoints}
+            enableDynamicSizing={false}
+            enablePanDownToClose
+            onClose={handleClose}
+            keyboardBehavior={Platform.OS === 'ios' ? 'interactive' : 'extend'}
+            keyboardBlurBehavior="restore"
+            backdropComponent={renderBackdrop}
+            backgroundStyle={styles.sheetBg}
+            handleIndicatorStyle={styles.handle}
+            style={styles.sheetShadow}
           >
-            <View onLayout={onContentLayout}>
-              {title && (
-                <View style={styles.header}>
-                  <Text style={styles.title} accessibilityRole="header">
-                    {title}
-                  </Text>
-                  {description && <Text style={styles.description}>{description}</Text>}
-                </View>
-              )}
-              {children}
-            </View>
-          </BottomSheetScrollView>
-        </BottomSheetInline>
-      </GestureHandlerRootView>
+            <BottomSheetScrollView
+              contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <View onLayout={onContentLayout}>
+                {title && (
+                  <View style={styles.header}>
+                    <Text style={styles.title} accessibilityRole="header">
+                      {title}
+                    </Text>
+                    {description && <Text style={styles.description}>{description}</Text>}
+                  </View>
+                )}
+                {children}
+              </View>
+            </BottomSheetScrollView>
+          </BottomSheetInline>
+        </GestureHandlerRootView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
