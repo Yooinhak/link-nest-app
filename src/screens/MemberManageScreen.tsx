@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AlertDialog from '../components/AlertDialog';
 import BottomSheet from '../components/BottomSheet';
@@ -41,6 +42,7 @@ export default function MemberManageScreen() {
   const navigation = useNavigation<Nav>();
   const { groupId } = route.params;
   const { showToast } = useToast();
+  const insets = useSafeAreaInsets(); // Android edge-to-edge 하단 대응
 
   const { groups, selectGroup, refetchGroups } = useGroup();
   const group = groups.find((g) => g.id === groupId) ?? null;
@@ -83,7 +85,10 @@ export default function MemberManageScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* 그룹 헤더 */}
         <View style={styles.groupCard}>
           <View style={styles.groupTile}>
@@ -255,7 +260,7 @@ export default function MemberManageScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: 20, paddingBottom: 60 },
+  scroll: { padding: 20 },
   groupCard: {
     flexDirection: 'row',
     alignItems: 'center',

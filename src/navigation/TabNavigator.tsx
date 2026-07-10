@@ -1,8 +1,9 @@
 import React from 'react';
 
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HomeIcon, UserIcon } from '../components/icons';
 import { colors } from '../constants/theme';
@@ -14,12 +15,17 @@ import { TabParamList } from './types';
 const Tab = createBottomTabNavigator<TabParamList>();
 
 export default function TabNavigator() {
+  // Android edge-to-edge: 시스템 내비게이션 바(뒤로/홈)와 겹치지 않도록
+  // 고정 높이 대신 safe-area 인셋 기반으로 계산.
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 8);
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: true,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [styles.tabBar, { height: 56 + bottomInset, paddingBottom: bottomInset }],
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textDisabled,
         tabBarLabelStyle: styles.tabLabel,
@@ -50,7 +56,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.divider,
-    height: Platform.OS === 'ios' ? 88 : 64,
     paddingTop: 8,
     elevation: 0,
     shadowOpacity: 0,

@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import { RouteProp, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
@@ -51,6 +52,7 @@ type SortOrder = 'newest' | 'oldest';
 export default function FolderDetailScreen() {
   const route = useRoute<FolderDetailRouteProp>();
   const { folderId } = route.params;
+  const insets = useSafeAreaInsets(); // Android edge-to-edge 하단 대응
   const { showToast } = useToast();
 
   const [viewMode, setViewMode] = useState<ViewMode>('large');
@@ -282,7 +284,7 @@ export default function FolderDetailScreen() {
           data={filteredList}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: 100 + insets.bottom }]}
           ItemSeparatorComponent={ItemSeparator}
           showsVerticalScrollIndicator={false}
           removeClippedSubviews
@@ -311,7 +313,7 @@ export default function FolderDetailScreen() {
       {/* viewer 는 링크 추가 FAB 숨김 (시안 권한 규칙) */}
       {canEdit && (
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, { bottom: 24 + insets.bottom }]}
           onPress={() => {
             setPostUrl('');
             setPostDescription('');
@@ -473,12 +475,11 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   countText: { fontSize: 14, color: colors.textMuted, fontWeight: '600' },
-  list: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 100 },
+  list: { paddingHorizontal: 20, paddingTop: 14 },
   form: { gap: 16 },
   sheetBtns: { flexDirection: 'row', gap: 10, marginTop: 26, marginBottom: 8 },
   fab: {
     position: 'absolute',
-    bottom: 30,
     right: 20,
     width: 56,
     height: 56,
