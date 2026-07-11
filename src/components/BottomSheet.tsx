@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   Dimensions,
-  KeyboardAvoidingView,
+  Keyboard,
   LayoutChangeEvent,
   Modal,
   Platform,
@@ -28,12 +28,16 @@ import { colors, radius, shadows } from '../constants/theme';
  * 에서 present() 는 호출되지만 Portal 이 시트 콘텐츠를 마운트하지 않아 열리지 않았다.
  * 그래서 Portal 을 쓰지 않는 인라인 컴포넌트로 구현한다.
  *
- * 레이어링(2026-07-10): 인라인 시트를 RN Modal 로 감싼다 —
- *   - 인라인 시트가 화면 트리 안에 있으면 탭바가 시트 위에 그려지는 문제 해결.
- *   - statusBarTranslucent/navigationBarTranslucent 로 Android edge-to-edge 에서
- *     dim 이 시스템 바 영역까지 덮는다.
- *   - Modal 내부 제스처는 GestureHandlerRootView 래핑이 필수(gesture-handler 제약).
- *   - 하단 패딩은 safe-area inset 기반(제스처 바/홈 인디케이터 대응).
+ * 레이어링: 인라인 시트를 RN Modal 로 감싼다 — 탭바/시스템 바 위층 확보,
+ * statusBarTranslucent/navigationBarTranslucent 로 edge-to-edge dim.
+ * Modal 내부 제스처는 GestureHandlerRootView 래핑 필수.
+ *
+ * 키보드(2026-07-10):
+ * - iOS: gorhom keyboardBehavior="interactive" (BottomSheetTextInput 필요 — Input.tsx 참고)
+ * - Android: gorhom 의 adjustResize 는 액티비티 창 기준이라 Modal(별도 창)에서 무효.
+ *   KeyboardAvoidingView 래핑은 gorhom 내부 레이아웃과 충돌해 콘텐츠가 사라지는 회귀를
+ *   유발했음 → 대신 Keyboard 이벤트로 높이를 받아 gorhom `bottomInset` 으로 시트를
+ *   들어올린다 (레이아웃 재계산 없이 위치만 이동, 결정적).
  *
  * 프롭 API(visible/onClose/title/description/children)는 기존과 동일 → 사용처 변경 불필요.
  */
@@ -72,11 +76,30 @@ export default function BottomSheet({
     }
   }, [visible]);
 
-  const bottomPadding = Math.max(insets.bottom, 12) + 12;
+  // Android: Modal 창은 adjustResize 영향을 받지 않으므로 키보드 높이만큼 시트를 올린다
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) =>
+      setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const bottomPadding = Math.max(insets.bottom, 16) + 16;
+
+  // 시트 크롬(그랩 핸들 ~24 + 콘텐츠 상단 패딩 8 + 여유 12) — snapPoint 계산에 필수.
+  // 이걸 빼먹으면 시트가 ~32px 짧아져 하단 버튼이 잘린다 (2026-07-10 버그).
+  const CHROME_HEIGHT = 44;
 
   const snapPoints = useMemo(() => {
-    const measured = contentHeight > 0 ? contentHeight + bottomPadding : SCREEN_HEIGHT * 0.45;
-    return [Math.min(Math.max(measured, 120), MAX_HEIGHT)];
+    const measured =
+      contentHeight > 0 ? contentHeight + bottomPadding + CHROME_HEIGHT : SCREEN_HEIGHT * 0.45;
+    return [Math.min(Math.max(measured, 160), MAX_HEIGHT)];
   }, [contentHeight, bottomPadding]);
 
   const onContentLayout = useCallback((e: LayoutChangeEvent) => {
@@ -112,51 +135,46 @@ export default function BottomSheet({
       animationType="none" // 등장/퇴장 애니메이션은 gorhom 이 담당
       onRequestClose={() => ref.current?.close()} // Android 뒤로가기 → 시트 닫기
       statusBarTranslucent
-      navigationBarTranslucent
+      // NOTE: navigationBarTranslucent 금지(2026-07-10) — Modal 이 시스템 내비 바
+      // 밑까지 확장되어 시트 하단 버튼이 시스템 바에 가려 잘렸다 (safe-area 인셋은
+      // Modal 밖 창 기준이라 이 확장분을 보정하지 못함). 탭바 덮기는 Modal 래핑만으로 충분.
     >
-      {/* Android: gorhom 의 adjustResize 는 액티비티 창 기준이라 Modal(별도 창)에서는
-          동작하지 않는다 → 이벤트 기반 KeyboardAvoidingView(padding)로 시트를 밀어올린다.
-          iOS 는 gorhom interactive 가 담당하므로 KAV 비활성(이중 이동 방지). */}
-      <KeyboardAvoidingView
-        style={styles.rootView}
-        behavior="padding"
-        enabled={Platform.OS === 'android'}
-      >
-        <GestureHandlerRootView style={styles.rootView}>
-          <BottomSheetInline
-            ref={ref}
-            index={0}
-            snapPoints={snapPoints}
-            enableDynamicSizing={false}
-            enablePanDownToClose
-            onClose={handleClose}
-            keyboardBehavior={Platform.OS === 'ios' ? 'interactive' : 'extend'}
-            keyboardBlurBehavior="restore"
-            backdropComponent={renderBackdrop}
-            backgroundStyle={styles.sheetBg}
-            handleIndicatorStyle={styles.handle}
-            style={styles.sheetShadow}
+      <GestureHandlerRootView style={styles.rootView}>
+        <BottomSheetInline
+          ref={ref}
+          index={0}
+          snapPoints={snapPoints}
+          enableDynamicSizing={false}
+          enablePanDownToClose
+          onClose={handleClose}
+          keyboardBehavior="interactive"
+          keyboardBlurBehavior="restore"
+          android_keyboardInputMode="adjustResize"
+          bottomInset={Platform.OS === 'android' ? keyboardHeight : 0}
+          backdropComponent={renderBackdrop}
+          backgroundStyle={styles.sheetBg}
+          handleIndicatorStyle={styles.handle}
+          style={styles.sheetShadow}
+        >
+          <BottomSheetScrollView
+            contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            <BottomSheetScrollView
-              contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <View onLayout={onContentLayout}>
-                {title && (
-                  <View style={styles.header}>
-                    <Text style={styles.title} accessibilityRole="header">
-                      {title}
-                    </Text>
-                    {description && <Text style={styles.description}>{description}</Text>}
-                  </View>
-                )}
-                {children}
-              </View>
-            </BottomSheetScrollView>
-          </BottomSheetInline>
-        </GestureHandlerRootView>
-      </KeyboardAvoidingView>
+            <View onLayout={onContentLayout}>
+              {title && (
+                <View style={styles.header}>
+                  <Text style={styles.title} accessibilityRole="header">
+                    {title}
+                  </Text>
+                  {description && <Text style={styles.description}>{description}</Text>}
+                </View>
+              )}
+              {children}
+            </View>
+          </BottomSheetScrollView>
+        </BottomSheetInline>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
