@@ -2,82 +2,42 @@ import React from 'react';
 
 import { StyleSheet, Text, View } from 'react-native';
 
-import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
+import { colors, glass } from '../constants/theme';
 
-import { colors } from '../constants/theme';
+/**
+ * 빈 상태 — 블루 글래스 시안 10:
+ * 대시 보더 유리 타일(130) + 큰 이모지 + 타이틀 + 서브텍스트 (+ 선택 CTA).
+ * warmTone=true 면 공유 그룹의 웜 공기에 맞는 대시/텍스트 색을 쓴다.
+ */
 
 interface EmptyStateProps {
   type: 'folder' | 'link' | 'search';
   title: string;
   subtitle: string;
+  /** 공유 그룹(웜 공기) 화면이면 true */
+  warmTone?: boolean;
+  /** CTA 버튼 등 하단 액션 (선택) */
+  children?: React.ReactNode;
 }
 
-function FolderIllustration() {
-  return (
-    <Svg width={120} height={120} viewBox="0 0 120 120" fill="none">
-      {/* Shadow */}
-      <Ellipse cx={60} cy={105} rx={40} ry={6} fill={colors.gray[200]} opacity={0.5} />
-      {/* Folder back */}
-      <Rect x={18} y={35} width={84} height={60} rx={8} fill={colors.blue[100]} />
-      {/* Folder tab */}
-      <Path d="M18 43c0-4.4 3.6-8 8-8h20l6 10h42c4.4 0 8 3.6 8 8v0H18V43z" fill={colors.primary} opacity={0.9} />
-      {/* Folder front */}
-      <Rect x={18} y={50} width={84} height={45} rx={8} fill={colors.primary} opacity={0.15} />
-      {/* Plus icon */}
-      <Circle cx={60} cy={70} r={14} fill={colors.primary} opacity={0.2} />
-      <Path d="M60 63v14M53 70h14" stroke={colors.primary} strokeWidth={2.5} strokeLinecap="round" />
-    </Svg>
-  );
-}
+const EMOJI: Record<EmptyStateProps['type'], string> = {
+  folder: '📁',
+  link: '🔗',
+  search: '🔍',
+};
 
-function LinkIllustration() {
-  return (
-    <Svg width={120} height={120} viewBox="0 0 120 120" fill="none">
-      {/* Shadow */}
-      <Ellipse cx={60} cy={105} rx={40} ry={6} fill={colors.gray[200]} opacity={0.5} />
-      {/* Chain link 1 */}
-      <G opacity={0.9}>
-        <Rect x={25} y={40} width={35} height={44} rx={10} stroke={colors.primary} strokeWidth={4} fill="none" />
-      </G>
-      {/* Chain link 2 */}
-      <G opacity={0.9}>
-        <Rect x={60} y={36} width={35} height={44} rx={10} stroke={colors.blue[100]} strokeWidth={4} fill="none" />
-      </G>
-      {/* Connection point */}
-      <Circle cx={60} cy={58} r={5} fill={colors.primary} opacity={0.3} />
-      {/* Sparkles */}
-      <Path d="M85 30l2 4 4 2-4 2-2 4-2-4-4-2 4-2z" fill={colors.primary} opacity={0.4} />
-      <Path d="M30 28l1.5 3 3 1.5-3 1.5-1.5 3-1.5-3-3-1.5 3-1.5z" fill={colors.blue[100]} opacity={0.6} />
-    </Svg>
-  );
-}
+export default function EmptyState({ type, title, subtitle, warmTone = false, children }: EmptyStateProps) {
+  const dashColor = warmTone ? 'rgba(249,115,22,0.45)' : 'rgba(139,126,242,0.45)';
+  const subColor = warmTone ? '#8B7355' : colors.textFaint;
 
-function SearchIllustration() {
-  return (
-    <Svg width={120} height={120} viewBox="0 0 120 120" fill="none">
-      {/* Shadow */}
-      <Ellipse cx={60} cy={105} rx={40} ry={6} fill={colors.gray[200]} opacity={0.5} />
-      {/* Magnifying glass circle */}
-      <Circle cx={52} cy={55} r={24} stroke={colors.gray[300]} strokeWidth={4} fill="none" />
-      {/* Glass fill */}
-      <Circle cx={52} cy={55} r={20} fill={colors.gray[100]} />
-      {/* Handle */}
-      <Path d="M70 73l18 18" stroke={colors.gray[300]} strokeWidth={5} strokeLinecap="round" />
-      {/* Question mark */}
-      <Path d="M47 48c0-4 3-7 7-7s7 3 7 7c0 3-2 4-4 5s-3 2-3 4" stroke={colors.gray[400]} strokeWidth={2.5} strokeLinecap="round" />
-      <Circle cx={54} cy={66} r={1.5} fill={colors.gray[400]} />
-    </Svg>
-  );
-}
-
-export default function EmptyState({ type, title, subtitle }: EmptyStateProps) {
   return (
     <View style={styles.container}>
-      {type === 'folder' && <FolderIllustration />}
-      {type === 'link' && <LinkIllustration />}
-      {type === 'search' && <SearchIllustration />}
+      <View style={[styles.tile, { borderColor: dashColor }, warmTone ? styles.tileWarmShadow : styles.tileBlueShadow]}>
+        <Text style={styles.emoji}>{EMOJI[type]}</Text>
+      </View>
       <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
+      <Text style={[styles.subtitle, { color: subColor }]}>{subtitle}</Text>
+      {children && <View style={styles.actions}>{children}</View>}
     </View>
   );
 }
@@ -85,19 +45,42 @@ export default function EmptyState({ type, title, subtitle }: EmptyStateProps) {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    paddingTop: 60,
-    gap: 8,
+    paddingTop: 64,
+    paddingHorizontal: 40,
+  },
+  tile: {
+    width: 130,
+    height: 130,
+    borderRadius: 30,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    backgroundColor: glass.bgSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // 반투명 표면에는 그림자 금지 (theme.ts 유리 표면 규칙) — 대시 보더 색으로만 톤 구분
+  tileBlueShadow: {},
+  tileWarmShadow: {},
+  emoji: {
+    fontSize: 44,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.gray[700],
-    marginTop: 8,
+    fontSize: 19,
+    fontFamily: 'LINESeedKR-Bold',
+    color: colors.ink,
+    letterSpacing: -0.57,
+    marginTop: 26,
   },
   subtitle: {
-    fontSize: 14,
-    color: colors.gray[500],
+    fontSize: 13,
+    fontFamily: 'LINESeedKR',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
+    marginTop: 9,
+  },
+  actions: {
+    alignItems: 'center',
+    marginTop: 24,
+    gap: 4,
   },
 });

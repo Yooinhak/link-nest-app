@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fallbackText: {
-    fontWeight: '700',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.textFaint,
   },
 });

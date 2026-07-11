@@ -208,13 +208,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '800',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.ink,
     letterSpacing: -0.6,
   },
   description: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'LINESeedKR',
     color: colors.textFaint,
     lineHeight: 19,
   },

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AlertDialog from '../components/AlertDialog';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
+import GlassBackground from '../components/GlassBackground';
 import {
   ChevronRightIcon,
   FileTextIcon,
@@ -19,18 +20,24 @@ import {
 import Input from '../components/Input';
 import Skeleton from '../components/Skeleton';
 import { useToast } from '../components/Toast';
-import { colors, shadows } from '../constants/theme';
+import { colors, glass, shadows } from '../constants/theme';
 import { EXTERNAL_URLS } from '../constants/urls';
+import { useGroup } from '../contexts/GroupContext';
 import { queryKeys } from '../utils/react-query/queryKeys';
 import { supabase } from '../utils/supabase/client';
 
+/**
+ * 프로필 — 블루 글래스 시안 11.
+ * 유리 프로필 카드 + 통계(전체 링크/그룹) + 유리 메뉴 카드 + 버전.
+ */
+
 // 계정 삭제를 최종 확정시키기 위해 사용자가 반드시 타이핑해야 하는 문구.
-// 실수로 삭제가 일어나는 것을 방지하기 위한 2단계 확인의 핵심 장치.
 const DELETE_CONFIRMATION_TEXT = '삭제';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
+  const { groups } = useGroup();
   const [logoutVisible, setLogoutVisible] = useState(false);
   const [deleteSheetVisible, setDeleteSheetVisible] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -40,6 +47,15 @@ export default function ProfileScreen() {
     queryKey: [queryKeys.USER_PROFILE],
     queryFn: async () => await supabase.auth.getUser(),
     select: (data) => data.data.user,
+  });
+
+  // 시안 11 통계: 내가 볼 수 있는 전체 링크 수 (RLS 기준, count 만 조회)
+  const { data: totalLinks } = useQuery({
+    queryKey: ['profile-total-links'],
+    queryFn: async () => {
+      const { count } = await supabase.from('posts').select('id', { count: 'exact', head: true });
+      return count ?? 0;
+    },
   });
 
   const handleSignOut = async () => {
@@ -78,7 +94,6 @@ export default function ProfileScreen() {
       }
 
       // 성공: 서버에서 auth.users가 제거되어 현재 JWT는 무효 상태.
-      // 로컬 세션/캐시를 정리하면 RootNavigator가 Login으로 전환한다.
       await supabase.auth.signOut();
       setDeleteSheetVisible(false);
     } catch (err) {
@@ -88,15 +103,22 @@ export default function ProfileScreen() {
     }
   };
 
-  const canDelete =
-    deleteConfirmText.trim() === DELETE_CONFIRMATION_TEXT && !isDeleting;
+  const canDelete = deleteConfirmText.trim() === DELETE_CONFIRMATION_TEXT && !isDeleting;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Text style={styles.headerTitle} accessibilityRole="header">설정</Text>
+    <View style={styles.container}>
+      <GlassBackground variant="personal" />
 
-      <View style={styles.section}>
-        <View style={styles.profileRow}>
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: 130 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.headerTitle} accessibilityRole="header">
+          프로필
+        </Text>
+
+        {/* 프로필 카드 */}
+        <View style={[styles.card, styles.profileCard]}>
           {isLoading ? (
             <Skeleton width={56} height={56} borderRadius={28} />
           ) : user?.user_metadata?.avatar_url ? (
@@ -120,56 +142,80 @@ export default function ProfileScreen() {
                 <Text style={styles.name} numberOfLines={1}>
                   {user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? ''}
                 </Text>
-                <Text style={styles.email} numberOfLines={1}>{user?.email ?? ''}</Text>
+                <Text style={styles.email} numberOfLines={1}>
+                  {user?.email ?? ''}
+                </Text>
               </>
             )}
           </View>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.menuRow} onPress={() => setLogoutVisible(true)} activeOpacity={0.5} accessibilityRole="button" accessibilityLabel="로그아웃">
-          <LogOutIcon size={20} color={colors.danger} />
-          <Text style={[styles.menuLabel, { color: colors.danger }]}>로그아웃</Text>
-          <ChevronRightIcon size={16} color={colors.iconFaint} />
-        </TouchableOpacity>
-        <View style={styles.divider} />
-        <TouchableOpacity style={styles.menuRow} onPress={openDeleteSheet} activeOpacity={0.5} accessibilityRole="button" accessibilityLabel="계정 삭제">
-          <TrashIcon size={20} color={colors.danger} />
-          <Text style={[styles.menuLabel, { color: colors.danger }]}>계정 삭제</Text>
-          <ChevronRightIcon size={16} color={colors.iconFaint} />
-        </TouchableOpacity>
-      </View>
+        {/* 통계 카드 */}
+        <View style={styles.statsRow}>
+          <View style={[styles.card, styles.statCard]}>
+            <Text style={[styles.statNumber, { color: colors.primary }]}>{totalLinks ?? '–'}</Text>
+            <Text style={styles.statLabel}>전체 링크</Text>
+          </View>
+          <View style={[styles.card, styles.statCard]}>
+            <Text style={styles.statNumber}>{groups.filter((g) => g.type !== 'personal').length}</Text>
+            <Text style={styles.statLabel}>그룹</Text>
+          </View>
+        </View>
 
-      <View style={styles.section}>
-        <TouchableOpacity
-          style={styles.menuRow}
-          onPress={() => Linking.openURL(EXTERNAL_URLS.PRIVACY_POLICY)}
-          activeOpacity={0.5}
-          accessibilityRole="link"
-          accessibilityLabel="개인정보 처리방침"
-        >
-          <ShieldIcon size={20} color={colors.textMuted} />
-          <Text style={[styles.menuLabel, { color: colors.text }]}>개인정보 처리방침</Text>
-          <ChevronRightIcon size={16} color={colors.iconFaint} />
-        </TouchableOpacity>
-        <View style={styles.divider} />
-        <TouchableOpacity
-          style={styles.menuRow}
-          onPress={() => Linking.openURL(EXTERNAL_URLS.TERMS_OF_SERVICE)}
-          activeOpacity={0.5}
-          accessibilityRole="link"
-          accessibilityLabel="이용약관"
-        >
-          <FileTextIcon size={20} color={colors.textMuted} />
-          <Text style={[styles.menuLabel, { color: colors.text }]}>이용약관</Text>
-          <ChevronRightIcon size={16} color={colors.iconFaint} />
-        </TouchableOpacity>
-      </View>
+        {/* 문서 메뉴 */}
+        <View style={[styles.card, styles.menuCard]}>
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => Linking.openURL(EXTERNAL_URLS.PRIVACY_POLICY)}
+            activeOpacity={0.5}
+            accessibilityRole="link"
+            accessibilityLabel="개인정보 처리방침"
+          >
+            <ShieldIcon size={18} color={colors.textMuted} />
+            <Text style={styles.menuLabel}>개인정보 처리방침</Text>
+            <ChevronRightIcon size={15} color={colors.iconFaint} />
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => Linking.openURL(EXTERNAL_URLS.TERMS_OF_SERVICE)}
+            activeOpacity={0.5}
+            accessibilityRole="link"
+            accessibilityLabel="이용약관"
+          >
+            <FileTextIcon size={18} color={colors.textMuted} />
+            <Text style={styles.menuLabel}>이용약관</Text>
+            <ChevronRightIcon size={15} color={colors.iconFaint} />
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Link Nest v1.0.0</Text>
-      </View>
+        {/* 위험 메뉴 */}
+        <View style={[styles.card, styles.menuCard]}>
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => setLogoutVisible(true)}
+            activeOpacity={0.5}
+            accessibilityRole="button"
+            accessibilityLabel="로그아웃"
+          >
+            <LogOutIcon size={18} color={colors.danger} />
+            <Text style={[styles.menuLabel, { color: colors.danger }]}>로그아웃</Text>
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={openDeleteSheet}
+            activeOpacity={0.5}
+            accessibilityRole="button"
+            accessibilityLabel="계정 삭제"
+          >
+            <TrashIcon size={18} color={colors.danger} />
+            <Text style={[styles.menuLabel, { color: colors.danger }]}>계정 삭제</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.footerText}>Linkle v2.0.0</Text>
+      </ScrollView>
 
       <AlertDialog
         visible={logoutVisible}
@@ -192,19 +238,12 @@ export default function ProfileScreen() {
             value={deleteConfirmText}
             onChangeText={setDeleteConfirmText}
             placeholder={DELETE_CONFIRMATION_TEXT}
-            style={styles.deleteInput}
             autoCapitalize="none"
             autoCorrect={false}
             editable={!isDeleting}
           />
           <View style={styles.deleteButtonRow}>
-            <Button
-              variant="secondary"
-              onPress={closeDeleteSheet}
-              disabled={isDeleting}
-              style={{ flex: 1 }}
-              accessibilityLabel="취소"
-            >
+            <Button variant="secondary" onPress={closeDeleteSheet} disabled={isDeleting} style={{ flex: 1 }} accessibilityLabel="취소">
               취소
             </Button>
             <Button
@@ -225,49 +264,77 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1, backgroundColor: '#F6F9FE' },
+  scroll: { paddingHorizontal: 22 },
   headerTitle: {
     fontSize: 26,
-    fontWeight: '800',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.ink,
     letterSpacing: -1.04, // -0.04em
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 18,
+    paddingBottom: 16,
   },
-  // 시안 06: 카드 그룹 — radius 18 + 은은한 그림자 (overflow hidden 은 iOS 그림자를 죽여 제거)
-  section: {
-    backgroundColor: colors.surface,
-    marginHorizontal: 20,
-    borderRadius: 18,
-    marginBottom: 14,
-    ...shadows.card,
-  },
-  profileRow: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 15 },
-  avatar: { width: 56, height: 56, borderRadius: 28 },
-  avatarFallback: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  avatarLetter: { fontSize: 24, fontWeight: '700', color: colors.white },
-  profileInfo: { flex: 1, gap: 3 },
-  name: { fontSize: 18, fontWeight: '700', color: colors.ink, letterSpacing: -0.36 }, // -0.02em
-  email: { fontSize: 14, fontWeight: '500', color: colors.textFaint },
-  menuRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 16, gap: 14 },
-  menuLabel: { flex: 1, fontSize: 16, fontWeight: '500' },
-  divider: { height: 1, backgroundColor: colors.divider, marginLeft: 52 },
-  footer: { alignItems: 'center', marginTop: 26 },
-  footerText: { fontSize: 13, fontWeight: '500', color: colors.textDisabled },
-  deleteBody: { paddingBottom: 16, gap: 20 },
-  // 시안 07: "삭제" 입력 필드 — fieldBg + border
-  deleteInput: {
-    marginTop: 4,
+  card: {
+    backgroundColor: glass.bg,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 52,
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.ink,
-    backgroundColor: colors.fieldBg,
+    borderColor: glass.border,
+    ...shadows.glassCard,
   },
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    borderRadius: 20,
+    padding: 15,
+  },
+  avatar: { width: 56, height: 56, borderRadius: 28 },
+  avatarFallback: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.primaryGlow,
+  },
+  avatarLetter: { fontSize: 23, fontFamily: 'LINESeedKR-Bold', color: colors.white },
+  profileInfo: { flex: 1, minWidth: 0, gap: 2 },
+  name: { fontSize: 18, fontFamily: 'LINESeedKR-Bold', color: colors.ink, letterSpacing: -0.36 },
+  email: { fontSize: 13, fontFamily: 'LINESeedKR', color: colors.textFaint },
+  statsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  statCard: {
+    flex: 1,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    gap: 1,
+  },
+  statNumber: {
+    fontSize: 22,
+    fontFamily: 'LINESeedKR-Bold',
+    letterSpacing: 0.4, // Space Grotesk 근사
+    color: colors.ink,
+  },
+  statLabel: { fontSize: 12, fontFamily: 'LINESeedKR', color: colors.textFaint },
+  menuCard: {
+    borderRadius: 18,
+    marginTop: 12,
+  },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 14,
+  },
+  menuLabel: { flex: 1, fontSize: 15, fontFamily: 'LINESeedKR', color: colors.text },
+  divider: { height: 1, backgroundColor: 'rgba(20,30,55,0.05)', marginLeft: 46 },
+  footerText: {
+    textAlign: 'center',
+    fontSize: 12,
+    fontFamily: 'LINESeedKR',
+    color: '#A29BC4', // 라벤더 공기 위 푸터 (v3)
+    marginTop: 22,
+  },
+  deleteBody: { paddingBottom: 16, gap: 20 },
   deleteButtonRow: { flexDirection: 'row', gap: 11 },
 });

@@ -23,7 +23,7 @@ interface AvatarStackProps {
   max?: number;
 }
 
-const PALETTE = ['#3182F6', '#EC4899', '#22C55E', '#8B5CF6', '#F97316'];
+const PALETTE = ['#8B7EF2', '#EC4899', '#22C55E', '#6D5EF0', '#F97316'];
 
 function colorFor(userId: string) {
   let h = 0;
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fallbackText: {
-    fontWeight: '700',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.white,
   },
   more: {
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   moreText: {
-    fontWeight: '600',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.textFaint,
   },
 });

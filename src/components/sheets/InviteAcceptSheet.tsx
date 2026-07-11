@@ -2,7 +2,7 @@ import React from 'react';
 
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '../../constants/theme';
+import { colors, warm } from '../../constants/theme';
 import { useGroup } from '../../contexts/GroupContext';
 import { useInvitePreviewQuery, useJoinGroup } from '../../hooks/queries/useGroups';
 import BottomSheet from '../BottomSheet';
@@ -99,23 +99,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
   },
+  // 블루 글래스 시안 05: 웜 이모지 타일 + 웜 그림자
   groupTile: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: colors.primaryTint,
+    width: 70,
+    height: 70,
+    borderRadius: 22,
+    backgroundColor: warm.tile,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: warm.accent,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    elevation: 3,
   },
   groupEmoji: {
-    fontSize: 30,
+    fontSize: 35,
   },
   groupName: {
-    fontSize: 21,
-    fontWeight: '800',
+    fontSize: 23,
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.ink,
-    letterSpacing: -0.63,
-    marginTop: 14,
+    letterSpacing: -0.69, // -0.03em
+    marginTop: 13,
   },
   metaRow: {
     flexDirection: 'row',
@@ -125,7 +131,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'LINESeedKR',
     color: colors.textFaint,
   },
   roleBox: {
@@ -135,13 +141,13 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     justifyContent: 'center',
     backgroundColor: colors.primaryTint,
-    borderRadius: 11,
+    borderRadius: 12,
     paddingVertical: 11,
-    marginTop: 18,
+    marginTop: 16,
   },
   roleText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12.5,
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.primary,
   },
   fullBtn: {
@@ -161,13 +167,13 @@ const styles = StyleSheet.create({
   },
   expiredTitle: {
     fontSize: 19,
-    fontWeight: '800',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.ink,
     marginTop: 14,
   },
   expiredDesc: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'LINESeedKR',
     color: colors.textFaint,
     marginTop: 6,
     marginBottom: 10,

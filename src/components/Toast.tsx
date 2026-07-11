@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   toastText: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.white,
     letterSpacing: -0.2,
   },
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.white,
   },
 });

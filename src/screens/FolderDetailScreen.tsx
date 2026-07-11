@@ -13,18 +13,22 @@ import {
   View,
 } from 'react-native';
 
-import { RouteProp, useRoute } from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import AvatarStack from '../components/AvatarStack';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
+import GlassBackground from '../components/GlassBackground';
 import {
-  ArrowUpDownIcon,
+  ChevronLeftIcon,
   LayoutGridIcon,
   ListIcon as ListGlyphIcon,
   PlusIcon,
   SearchIcon,
+  XIcon,
 } from '../components/icons';
 import Input from '../components/Input';
 import LinkPreviewCard, {
@@ -33,7 +37,7 @@ import LinkPreviewCard, {
   ViewMode,
 } from '../components/LinkPreviewCard';
 import { useToast } from '../components/Toast';
-import { colors, shadows } from '../constants/theme';
+import { colors, glass, shadows, warm } from '../constants/theme';
 import { useGroup } from '../contexts/GroupContext';
 import { useCreatePost, useGroupMembersQuery, usePostsQuery, useUpdatePost } from '../hooks/queries';
 import { useAuth } from '../hooks/useAuth';
@@ -47,11 +51,18 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 type FolderDetailRouteProp = RouteProp<MainStackParamList, 'FolderDetail'>;
+type Nav = NativeStackNavigationProp<MainStackParamList, 'FolderDetail'>;
 type SortOrder = 'newest' | 'oldest';
 
+/**
+ * 폴더 상세 — 블루 글래스 시안 07 "링크 피드".
+ * 커스텀 헤더(유리 백 버튼 + 브레드크럼 + 아바타 스택) + 정렬 칩 + 유리 링크 카드.
+ * 네이티브 스택 헤더는 끔 (MainStack headerShown: false) — 공기 배경 위에 직접 그린다.
+ */
 export default function FolderDetailScreen() {
   const route = useRoute<FolderDetailRouteProp>();
-  const { folderId } = route.params;
+  const navigation = useNavigation<Nav>();
+  const { folderId, folderName } = route.params;
   const insets = useSafeAreaInsets(); // Android edge-to-edge 하단 대응
   const { showToast } = useToast();
 
@@ -60,6 +71,7 @@ export default function FolderDetailScreen() {
   const [createVisible, setCreateVisible] = useState(false);
   const [postUrl, setPostUrl] = useState('');
   const [postDescription, setPostDescription] = useState('');
+  const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // 링크 수정 상태
@@ -73,7 +85,6 @@ export default function FolderDetailScreen() {
   const filteredList = useMemo(() => {
     let list = postList ?? [];
 
-    // 검색 필터
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
@@ -82,7 +93,6 @@ export default function FolderDetailScreen() {
       );
     }
 
-    // 정렬
     return [...list].sort((a, b) => {
       const dateA = new Date(a.created_at ?? 0).getTime();
       const dateB = new Date(b.created_at ?? 0).getTime();
@@ -101,7 +111,6 @@ export default function FolderDetailScreen() {
       return;
     }
 
-    // 중복 감지
     const isDuplicate = postList?.some((item) => item.url === url);
     if (isDuplicate) {
       showToast('error', '이미 저장된 링크예요');
@@ -142,13 +151,22 @@ export default function FolderDetailScreen() {
     setSortOrder((prev) => (prev === 'newest' ? 'oldest' : 'newest'));
   }, []);
 
+  const toggleSearch = useCallback(() => {
+    mediumTap();
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSearchVisible((v) => {
+      if (v) setSearchQuery('');
+      return !v;
+    });
+  }, []);
+
   const handleEditPress = useCallback((id: number, description: string | null) => {
     setEditTarget({ id, description: description ?? '' });
     setEditVisible(true);
   }, []);
 
-  // ── 그룹 권한 + 멤버 정보 (시안 권한 규칙 / ⑦ 추가한 사람) ──
-  const { myRole, isPersonal, currentGroupId } = useGroup();
+  // ── 그룹 권한 + 멤버 정보 (권한 규칙 / 추가한 사람) ──
+  const { myRole, isPersonal, currentGroupId, currentGroup } = useGroup();
   const canEdit = myRole !== 'viewer';
   const { session } = useAuth();
   const myUserId = session?.user?.id ?? null;
@@ -156,7 +174,6 @@ export default function FolderDetailScreen() {
   const memberMap = useMemo(() => new Map(members.map((m) => [m.userId, m])), [members]);
 
   // iOS Mail 패턴: 한 번에 한 카드만 열린 상태로 유지.
-  // 카드가 스와이프 시작 시 자신의 핸들을 전달하며, 이전 카드를 닫는다.
   const lastOpenedRef = useRef<LinkPreviewCardHandle | null>(null);
   const handleSwipeStart = useCallback((handle: LinkPreviewCardHandle) => {
     if (lastOpenedRef.current && lastOpenedRef.current !== handle) {
@@ -165,8 +182,6 @@ export default function FolderDetailScreen() {
     lastOpenedRef.current = handle;
   }, []);
 
-  // B-5: FlatList 렌더 최적화 — renderItem/keyExtractor/ItemSeparator 를 useCallback 으로 안정화.
-  // React.memo 된 LinkPreviewCard 가 불필요하게 리렌더되지 않도록 한다.
   const renderItem = useCallback(
     ({
       item,
@@ -197,86 +212,125 @@ export default function FolderDetailScreen() {
 
   const keyExtractor = useCallback((item: { id: number }) => String(item.id), []);
 
-  const ItemSeparator = useCallback(() => <View style={{ height: viewMode === 'compact' ? 6 : 10 }} />, [viewMode]);
+  const ItemSeparator = useCallback(() => <View style={{ height: viewMode === 'compact' ? 8 : 11 }} />, [viewMode]);
 
   const count = postList?.length ?? 0;
+  const crumb = isPersonal
+    ? `🏠 나의 서랍 · ${count}개의 링크`
+    : `${currentGroup?.emoji ?? '📁'} ${currentGroup?.name ?? '그룹'} · ${count}개의 링크`;
 
   return (
     <View style={styles.container}>
-      {/* Search bar */}
-      <View style={styles.searchRow}>
-        <View style={styles.searchBar}>
-          <SearchIcon size={16} color={colors.textDisabled} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="링크 검색..."
-            placeholderTextColor={colors.textDisabled}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setSearchQuery('')}
-              activeOpacity={0.5}
-              accessibilityRole="button"
-              accessibilityLabel="검색 지우기"
-            >
-              <Text style={styles.searchClear}>취소</Text>
-            </TouchableOpacity>
-          )}
+      <GlassBackground variant={isPersonal ? 'personal' : 'group'} />
+
+      {/* ── 커스텀 헤더: 유리 백 버튼 + 타이틀/브레드크럼 + 아바타 ── */}
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="뒤로 가기"
+          >
+            <ChevronLeftIcon size={17} color={colors.ink} strokeWidth={2.4} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {folderName || '폴더'}
+            </Text>
+            <Text style={[styles.headerCrumb, !isPersonal && { color: warm.text }]} numberOfLines={1}>
+              {crumb}
+            </Text>
+          </View>
         </View>
+        {!isPersonal && members.length > 0 && (
+          <TouchableOpacity
+            onPress={() => currentGroupId && navigation.navigate('MemberManage', { groupId: currentGroupId })}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="그룹 관리"
+          >
+            <AvatarStack members={members} size={30} />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Count + Sort + View toggle */}
-      <View style={styles.countRow}>
-        <View style={styles.countLeft}>
-          <View style={styles.countBadge}>
-            <Text style={styles.countNumber}>{searchQuery ? filteredList.length : count}</Text>
-          </View>
-          <Text style={styles.countText}>개의 링크</Text>
-        </View>
-        <View style={styles.countRight}>
+      {/* ── 필터 칩: 정렬 + 보기 전환 + 검색 ── */}
+      <View style={styles.filterRow}>
+        <TouchableOpacity
+          style={styles.sortChip}
+          onPress={handleSortToggle}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel={`정렬 기준: ${sortOrder === 'newest' ? '최신순' : '오래된순'}`}
+        >
+          <Text style={styles.sortChipText}>{sortOrder === 'newest' ? '최신순' : '오래된순'}</Text>
+        </TouchableOpacity>
+
+        <View style={styles.viewToggle}>
           <TouchableOpacity
-            style={styles.sortBtn}
-            onPress={handleSortToggle}
+            style={[styles.viewToggleBtn, viewMode === 'large' && styles.viewToggleBtnActive]}
+            onPress={() => handleViewModeChange('large')}
             activeOpacity={0.6}
-            accessibilityRole="button"
-            accessibilityLabel={`정렬 기준: ${sortOrder === 'newest' ? '최신순' : '오래된순'}`}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: viewMode === 'large' }}
+            accessibilityLabel="큰 카드 보기"
           >
-            <ArrowUpDownIcon size={15} color={colors.textMuted} />
-            <Text style={styles.sortText}>{sortOrder === 'newest' ? '최신순' : '오래된순'}</Text>
+            <LayoutGridIcon size={15} color={viewMode === 'large' ? colors.primary : colors.textFaint} />
           </TouchableOpacity>
-          <View style={styles.viewToggle}>
-            <TouchableOpacity
-              style={[styles.viewToggleBtn, viewMode === 'large' && styles.viewToggleBtnActive]}
-              onPress={() => handleViewModeChange('large')}
-              activeOpacity={0.6}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: viewMode === 'large' }}
-              accessibilityLabel="큰 카드 보기"
-            >
-              <LayoutGridIcon size={16} color={viewMode === 'large' ? colors.primary : colors.textDisabled} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.viewToggleBtn, viewMode === 'compact' && styles.viewToggleBtnActive]}
-              onPress={() => handleViewModeChange('compact')}
-              activeOpacity={0.6}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: viewMode === 'compact' }}
-              accessibilityLabel="간단히 보기"
-            >
-              <ListGlyphIcon size={16} color={viewMode === 'compact' ? colors.primary : colors.textDisabled} />
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.viewToggleBtn, viewMode === 'compact' && styles.viewToggleBtnActive]}
+            onPress={() => handleViewModeChange('compact')}
+            activeOpacity={0.6}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: viewMode === 'compact' }}
+            accessibilityLabel="간단히 보기"
+          >
+            <ListGlyphIcon size={15} color={viewMode === 'compact' ? colors.primary : colors.textFaint} />
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.searchChip, searchVisible && styles.searchChipActive]}
+          onPress={toggleSearch}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={searchVisible ? '검색 닫기' : '검색'}
+        >
+          {searchVisible ? (
+            <XIcon size={15} color={colors.primary} strokeWidth={2.2} />
+          ) : (
+            <SearchIcon size={15} color={colors.textMuted} strokeWidth={2.2} />
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* ── 검색 바 (토글) ── */}
+      {searchVisible && (
+        <View style={styles.searchBarWrap}>
+          <View style={styles.searchBar}>
+            <SearchIcon size={15} color={colors.textDisabled} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="링크 검색..."
+              placeholderTextColor={colors.textDisabled}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus
+            />
           </View>
         </View>
-      </View>
+      )}
 
       {isLoading ? (
         <View style={styles.list}>
           {[1, 2, 3].map((i) => (
-            <LinkPreviewCardSkeleton key={i} viewMode={viewMode} />
+            <View key={i} style={{ marginBottom: 11 }}>
+              <LinkPreviewCardSkeleton viewMode={viewMode} />
+            </View>
           ))}
         </View>
       ) : (
@@ -284,7 +338,7 @@ export default function FolderDetailScreen() {
           data={filteredList}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
-          contentContainerStyle={[styles.list, { paddingBottom: 100 + insets.bottom }]}
+          contentContainerStyle={[styles.list, { paddingBottom: 120 + insets.bottom }]}
           ItemSeparatorComponent={ItemSeparator}
           showsVerticalScrollIndicator={false}
           removeClippedSubviews
@@ -294,26 +348,40 @@ export default function FolderDetailScreen() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
           ListEmptyComponent={
             searchQuery ? (
-              <EmptyState type="search" title="검색 결과가 없어요" subtitle="다른 키워드로 검색해보세요" />
+              <EmptyState type="search" title="검색 결과가 없어요" subtitle="다른 키워드로 검색해보세요" warmTone={!isPersonal} />
             ) : (
               <EmptyState
                 type="link"
                 title="아직 링크가 없어요"
                 subtitle={
                   !isPersonal
-                    ? '첫 링크를 함께 모아보세요'
-                    : '아래 버튼으로 링크를 추가해보세요'
+                    ? '인스타에서 본 맛집, 유튜브에서 본 카페 —\n첫 링크를 함께 모아보세요'
+                    : '아래 ＋ 버튼으로 첫 링크를 저장해보세요'
                 }
-              />
+                warmTone={!isPersonal}
+              >
+                {canEdit && (
+                  <Button
+                    size="small"
+                    onPress={() => {
+                      setPostUrl('');
+                      setPostDescription('');
+                      setCreateVisible(true);
+                    }}
+                  >
+                    ＋ 첫 링크 저장하기
+                  </Button>
+                )}
+              </EmptyState>
             )
           }
         />
       )}
 
-      {/* viewer 는 링크 추가 FAB 숨김 (시안 권한 규칙) */}
+      {/* viewer 는 링크 추가 FAB 숨김 (권한 규칙) */}
       {canEdit && (
         <TouchableOpacity
-          style={[styles.fab, { bottom: 24 + insets.bottom }]}
+          style={[styles.fab, { bottom: 26 + insets.bottom }]}
           onPress={() => {
             setPostUrl('');
             setPostDescription('');
@@ -323,7 +391,7 @@ export default function FolderDetailScreen() {
           accessibilityRole="button"
           accessibilityLabel="링크 추가"
         >
-          <PlusIcon size={24} color={colors.white} strokeWidth={2.5} />
+          <PlusIcon size={24} color={colors.white} strokeWidth={2.8} />
         </TouchableOpacity>
       )}
 
@@ -350,7 +418,7 @@ export default function FolderDetailScreen() {
           <Button variant="secondary" onPress={() => setCreateVisible(false)} style={{ flex: 1 }}>
             취소
           </Button>
-          <Button onPress={handleCreate} loading={createPost.isPending} style={{ flex: 1 }}>
+          <Button onPress={handleCreate} loading={createPost.isPending} style={{ flex: 1.4 }}>
             추가
           </Button>
         </View>
@@ -368,7 +436,7 @@ export default function FolderDetailScreen() {
           <Button variant="secondary" onPress={() => setEditVisible(false)} style={{ flex: 1 }}>
             취소
           </Button>
-          <Button onPress={handleUpdateDescription} loading={updatePost.isPending} style={{ flex: 1 }}>
+          <Button onPress={handleUpdateDescription} loading={updatePost.isPending} style={{ flex: 1.4 }}>
             저장
           </Button>
         </View>
@@ -378,112 +446,125 @@ export default function FolderDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  searchRow: {
+  container: { flex: 1, backgroundColor: '#F6F9FE' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 6,
-    paddingBottom: 4,
-    backgroundColor: colors.surface,
+    gap: 10,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flexShrink: 1,
+  },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: glass.bg,
+    borderWidth: 1,
+    borderColor: glass.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitleWrap: { flexShrink: 1, gap: 1 },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: 'LINESeedKR-Bold',
+    color: colors.ink,
+    letterSpacing: -0.6, // -0.03em
+  },
+  headerCrumb: {
+    fontSize: 12,
+    fontFamily: 'LINESeedKR',
+    color: colors.textFaint,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+  },
+  sortChip: {
+    backgroundColor: colors.ink,
+    borderRadius: 19,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  sortChipText: {
+    fontSize: 12,
+    fontFamily: 'LINESeedKR-Bold',
+    color: colors.white,
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    backgroundColor: glass.bgSoft,
+    borderWidth: 1,
+    borderColor: glass.borderSoft,
+    borderRadius: 19,
+    padding: 2,
+  },
+  viewToggleBtn: {
+    width: 34,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewToggleBtnActive: {
+    backgroundColor: glass.bgStrong,
+    ...shadows.card,
+  },
+  searchChip: {
+    marginLeft: 'auto',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: glass.bgSoft,
+    borderWidth: 1,
+    borderColor: glass.borderSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchChipActive: {
+    backgroundColor: glass.bgStrong,
+    borderColor: glass.border,
+  },
+  searchBarWrap: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.divider,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 40,
+    backgroundColor: glass.bgStrong,
+    borderWidth: 1,
+    borderColor: glass.border,
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    height: 42,
     gap: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'LINESeedKR',
     color: colors.ink,
     paddingVertical: 0,
   },
-  searchClear: {
-    fontSize: 13,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  countRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 10,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  countLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  countRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sortBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-  },
-  sortText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  viewToggle: {
-    flexDirection: 'row',
-    backgroundColor: colors.divider,
-    borderRadius: 10,
-    padding: 2,
-  },
-  viewToggleBtn: {
-    width: 32,
-    height: 28,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  viewToggleBtnActive: {
-    backgroundColor: colors.surface,
-    shadowColor: '#141E37',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  countBadge: {
-    backgroundColor: colors.primary,
-    borderRadius: 11,
-    minWidth: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  countNumber: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.white,
-  },
-  countText: { fontSize: 14, color: colors.textMuted, fontWeight: '600' },
   list: { paddingHorizontal: 20, paddingTop: 14 },
   form: { gap: 16 },
   sheetBtns: { flexDirection: 'row', gap: 10, marginTop: 26, marginBottom: 8 },
   fab: {
     position: 'absolute',
     right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',

@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.white,
   },
 });

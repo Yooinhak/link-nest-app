@@ -5,12 +5,12 @@ import { StyleSheet, Text, View } from 'react-native';
 import { GroupRole } from '../hooks/queries/useGroups';
 
 /**
- * 역할 뱃지 — 시안 스펙:
- * owner(#E8F3FF/#3182F6) · 편집(#F0FDF4/#22C55E) · 보기(#F2F4F6/#6B7684)
+ * 역할 뱃지 — v3 인디고:
+ * owner(#EFECFF/#6D5EF0) · 편집(#F0FDF4/#22C55E) · 보기(#F2F4F6/#6B7684)
  */
 
 const ROLE_STYLES: Record<GroupRole, { bg: string; fg: string; label: string }> = {
-  owner: { bg: '#E8F3FF', fg: '#3182F6', label: '소유자' },
+  owner: { bg: '#EFECFF', fg: '#6D5EF0', label: '소유자' },
   editor: { bg: '#F0FDF4', fg: '#22C55E', label: '편집' },
   viewer: { bg: '#F2F4F6', fg: '#6B7684', label: '보기' },
 };
@@ -32,6 +32,6 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'LINESeedKR-Bold',
   },
 });

@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   menuText: {
     fontSize: 15,
     color: colors.gray[800],
-    fontWeight: '500',
+    fontFamily: 'LINESeedKR',
   },
   destructiveText: {
     color: colors.destructive,

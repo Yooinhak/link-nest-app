@@ -1,72 +1,179 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
-import { StyleSheet } from 'react-native';
+import { Keyboard, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { BottomTabBarProps, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HomeIcon, UserIcon } from '../components/icons';
-import { colors } from '../constants/theme';
+import { HomeIcon, PlusIcon, UserIcon } from '../components/icons';
+import SaveLinkSheet from '../components/sheets/SaveLinkSheet';
+import { colors, glass, shadows } from '../constants/theme';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import { lightTap } from '../utils/haptics';
 
 import { TabParamList } from './types';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
-export default function TabNavigator() {
+/**
+ * 플로팅 필 탭바 — 블루 글래스 시안 02/06/11.
+ * 화면 하단 가운데 떠 있는 유리 알약: [홈] [＋] [프로필].
+ * 활성 탭 = 파란 필(아이콘+라벨), 비활성 = 아이콘 원, ＋ = 링크 저장 시트.
+ *
+ * Android edge-to-edge: 알약의 bottom 오프셋에 insets.bottom 을 더해
+ * 시스템 내비 바를 피한다 (react-native-edge-to-edge 필요 — research.md).
+ * 키보드가 올라오면 알약을 숨긴다 (adjustResize 로 위로 밀려 어색해지는 것 방지).
+ */
+
+const TAB_META: Record<string, { label: string; Icon: typeof HomeIcon }> = {
+  Home: { label: '홈', Icon: HomeIcon },
+  Profile: { label: '프로필', Icon: UserIcon },
+};
+
+function FloatingTabBar({ state, navigation, onAddPress }: BottomTabBarProps & { onAddPress: () => void }) {
   const insets = useSafeAreaInsets();
 
-  // 시안(02) 기준 넉넉한 탭바: 콘텐츠 영역 64 + 하단 인셋.
-  // height 와 paddingBottom 을 함께 명시하면 v7 이 자체 인셋 패딩을 중복 적용하지
-  // 않음을 실측으로 확인 (2026-07-10 스크린샷 비교 — 수동/자동 렌더 결과 동일).
-  // 하단 인셋이 0으로 나온다면 react-native-edge-to-edge 미설치 문제.
+  // 키보드 노출 시 플로팅 바 숨김
+  const [keyboardShown, setKeyboardShown] = useState(false);
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvent, () => setKeyboardShown(true));
+    const hide = Keyboard.addListener(hideEvent, () => setKeyboardShown(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  if (keyboardShown) return null;
+
+  const renderTab = (routeName: string, index: number) => {
+    const meta = TAB_META[routeName];
+    if (!meta) return null;
+    const focused = state.index === index;
+    const route = state.routes[index];
+
+    const onPress = () => {
+      const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+      if (!focused && !event.defaultPrevented) {
+        lightTap();
+        navigation.navigate(route.name);
+      }
+    };
+
+    if (focused) {
+      return (
+        <TouchableOpacity
+          key={route.key}
+          style={styles.activePill}
+          onPress={onPress}
+          activeOpacity={0.85}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: true }}
+          accessibilityLabel={meta.label}
+        >
+          <meta.Icon size={18} color={colors.white} strokeWidth={2.4} />
+          <Text style={styles.activeLabel}>{meta.label}</Text>
+        </TouchableOpacity>
+      );
+    }
+    return (
+      <TouchableOpacity
+        key={route.key}
+        style={styles.idleCircle}
+        onPress={onPress}
+        activeOpacity={0.6}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: false }}
+        accessibilityLabel={meta.label}
+      >
+        <meta.Icon size={18} color={colors.textFaint} strokeWidth={2.2} />
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarShowLabel: true,
-        tabBarStyle: [styles.tabBar, { height: 64 + insets.bottom, paddingBottom: insets.bottom + 8 }],
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textDisabled,
-        tabBarLabelStyle: styles.tabLabel,
-        tabBarItemStyle: styles.tabItem,
-      }}
-    >
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{
-          tabBarLabel: '홈',
-          tabBarIcon: ({ color }) => <HomeIcon size={23} color={color} />,
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          tabBarLabel: '설정',
-          tabBarIcon: ({ color }) => <UserIcon size={23} color={color} />,
-        }}
-      />
-    </Tab.Navigator>
+    <View style={[styles.wrap, { bottom: insets.bottom + 14 }]} pointerEvents="box-none">
+      <View style={styles.pill}>
+        {renderTab('Home', 0)}
+        <TouchableOpacity
+          style={styles.idleCircle}
+          onPress={() => {
+            lightTap();
+            onAddPress();
+          }}
+          activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityLabel="링크 저장"
+        >
+          <PlusIcon size={19} color={colors.primary} strokeWidth={2.4} />
+        </TouchableOpacity>
+        {renderTab('Profile', 1)}
+      </View>
+    </View>
+  );
+}
+
+export default function TabNavigator() {
+  const [saveVisible, setSaveVisible] = useState(false);
+
+  return (
+    <>
+      <Tab.Navigator
+        screenOptions={{ headerShown: false }}
+        tabBar={(props) => <FloatingTabBar {...props} onAddPress={() => setSaveVisible(true)} />}
+      >
+        <Tab.Screen name="Home" component={HomeScreen} />
+        <Tab.Screen name="Profile" component={ProfileScreen} />
+      </Tab.Navigator>
+
+      {/* ＋ → 저장 위치 선택 시트 (URL 직접 입력 모드) */}
+      <SaveLinkSheet visible={saveVisible} onClose={() => setSaveVisible(false)} />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-    elevation: 0,
-    shadowOpacity: 0,
+  // 콘텐츠 위에 떠 있는 레이어 — 스크롤은 알약 뒤로 흐른다
+  wrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
-  tabItem: {
-    paddingTop: 10,
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: glass.bgStrong,
+    borderWidth: 1,
+    borderColor: glass.border,
+    borderRadius: 32,
+    padding: 7,
+    ...shadows.floatBar,
   },
-  tabLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 3,
+  activePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    height: 44,
+    paddingHorizontal: 18,
+    backgroundColor: colors.primary,
+    borderRadius: 24,
+    ...shadows.primaryGlow,
+  },
+  activeLabel: {
+    fontSize: 13,
+    fontFamily: 'LINESeedKR-Bold',
+    color: colors.white,
+  },
+  idleCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

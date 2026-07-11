@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.gray[900],
     marginTop: 8,
   },
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.white,
   },
 });

@@ -16,8 +16,9 @@ import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
+import GlassBackground from '../components/GlassBackground';
 import { useToast } from '../components/Toast';
-import { colors } from '../constants/theme';
+import { colors, glass } from '../constants/theme';
 import { supabase } from '../utils/supabase/client';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -218,12 +219,18 @@ export default function LoginScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* 딥 블루 공기 — 블루 글래스 시안 01 */}
+      <GlassBackground variant="login" />
+
       <View style={styles.topSection}>
-        <View style={styles.logoTile} accessibilityLabel="Link Nest 로고">
-          <Image source={logoIcon} style={styles.logoImage} resizeMode="cover" />
+        {/* 유리 받침 위 로고 타일 */}
+        <View style={styles.logoGlass}>
+          <View style={styles.logoTile} accessibilityLabel="Linkle 로고">
+            <Image source={logoIcon} style={styles.logoImage} resizeMode="cover" />
+          </View>
         </View>
-        <Text style={styles.title}>Link Nest</Text>
-        <Text style={styles.subtitle}>{'즐겨찾는 공유 링크를\n모두 모아두는 아늑한 장소'}</Text>
+        <Text style={styles.title}>Linkle</Text>
+        <Text style={styles.subtitle}>{'흩어진 링크를 한 곳에,\n친구와 함께 반짝이게'}</Text>
       </View>
 
       <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 20 }]}>
@@ -239,7 +246,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: '#F6F9FE',
   },
   topSection: {
     flex: 1,
@@ -247,33 +254,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
+  // 시안 01: 유리 받침(반투명 + 흰 보더) 안에 로고 타일
+  logoGlass: {
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    borderWidth: 1,
+    borderColor: glass.border,
+    borderRadius: 30,
+    padding: 14,
+    marginBottom: 14,
+    // 반투명 표면에는 그림자 금지 (theme.ts 유리 표면 규칙)
+  },
   // 그림자는 래퍼에, 라운드는 이미지에 — overflow hidden 없이 둘 다 유지
   logoTile: {
-    width: 96,
-    height: 96,
-    marginBottom: 16,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.18,
-    shadowRadius: 28,
-    elevation: 6,
+    width: 82,
+    height: 82,
   },
   logoImage: {
-    width: 96,
-    height: 96,
-    borderRadius: 28, // 스플래시 타일과 동일 비율 (28/96 = 128/440)
+    width: 82,
+    height: 82,
+    borderRadius: 24, // 스플래시 타일과 동일 비율 (≈28/96 = 128/440)
     backgroundColor: colors.primaryTint,
   },
   title: {
     fontSize: 28,
-    fontWeight: '800',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.ink,
     letterSpacing: -0.84, // -0.03em
   },
   subtitle: {
     fontSize: 15,
-    fontWeight: '500',
-    color: colors.textFaint,
+    fontFamily: 'LINESeedKR',
+    color: '#5A5375', // 딥 라벤더 공기 위 서브 텍스트 (v3)
     textAlign: 'center',
     lineHeight: 24,
     marginTop: 8,
@@ -284,32 +295,33 @@ const styles = StyleSheet.create({
   },
   socialBtn: {
     height: 54,
-    borderRadius: 16,
+    borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 9,
   },
   kakaoBtn: {
     backgroundColor: colors.kakao,
   },
+  // 시안 01: Google 버튼은 유리 표면
   googleBtn: {
-    backgroundColor: colors.white,
+    backgroundColor: 'rgba(255,255,255,0.75)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: glass.border,
   },
   appleBtn: {
     height: 54,
   },
   socialLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'LINESeedKR-Bold',
   },
   terms: {
     textAlign: 'center',
     fontSize: 11,
-    fontWeight: '500',
-    color: colors.textDisabled,
+    fontFamily: 'LINESeedKR',
+    color: '#8F89AB', // 딥 라벤더 공기 위 약관 텍스트 (v3)
     marginTop: 8,
   },
 });

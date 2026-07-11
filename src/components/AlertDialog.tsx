@@ -82,12 +82,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.gray[900],
     letterSpacing: -0.3,
   },
   description: {
     fontSize: 14,
+    fontFamily: 'LINESeedKR',
     color: colors.gray[500],
     lineHeight: 20,
     textAlign: 'center',
@@ -115,12 +116,12 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 15,
     color: colors.gray[600],
-    fontWeight: '600',
+    fontFamily: 'LINESeedKR-Bold',
   },
   confirmText: {
     fontSize: 15,
     color: colors.white,
-    fontWeight: '600',
+    fontFamily: 'LINESeedKR-Bold',
   },
   destructiveText: {
     color: colors.white,

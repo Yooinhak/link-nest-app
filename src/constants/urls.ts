@@ -7,6 +7,6 @@
  * TODO(G-7): 정적 호스팅 배포 후 URL 교체
  */
 export const EXTERNAL_URLS = {
-  PRIVACY_POLICY: 'https://linknest.app/privacy-policy',
-  TERMS_OF_SERVICE: 'https://linknest.app/terms-of-service',
+  PRIVACY_POLICY: 'https://linkle.app/privacy-policy',
+  TERMS_OF_SERVICE: 'https://linkle.app/terms-of-service',
 } as const;

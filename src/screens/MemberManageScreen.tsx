@@ -9,14 +9,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AlertDialog from '../components/AlertDialog';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
-import { PlusIcon, TrashIcon } from '../components/icons';
+import GlassBackground from '../components/GlassBackground';
+import { ChevronLeftIcon, PlusIcon, TrashIcon } from '../components/icons';
 import Input from '../components/Input';
 import MemberRow from '../components/MemberRow';
 import InviteSheet from '../components/sheets/InviteSheet';
 import { useToast } from '../components/Toast';
-import { colors, shadows } from '../constants/theme';
+import { colors, glass, shadows, typo, warm } from '../constants/theme';
 import { useGroup } from '../contexts/GroupContext';
 import {
+  useActiveInviteQuery,
   useChangeMemberRole,
   useCreateInvite,
   useDeleteGroup,
@@ -25,11 +27,15 @@ import {
   useLeaveGroup,
 } from '../hooks/queries/useGroups';
 import { MainStackParamList } from '../navigation/types';
+import { copyToClipboard, isClipboardAvailable } from '../utils/clipboard';
+import { lightTap } from '../utils/haptics';
+import { buildInviteUrl } from '../utils/inviteLink';
 import { supabase } from '../utils/supabase/client';
 
 /**
- * 멤버 관리 화면 — 시안 ⑤ (풀스크린).
- * 그룹 헤더 / MemberRow 리스트 / 친구 초대 / (owner) 링크 재설정·그룹 삭제 / (멤버) 나가기.
+ * 그룹 관리 — 블루 글래스 시안 08 (웜 공기, 풀스크린).
+ * 유리 백 버튼 헤더 / 그룹 카드 / 초대 링크 박스 / MEMBERS 리스트 /
+ * 친구 초대 / (owner) 링크 재설정·그룹 삭제 / (멤버) 나가기.
  */
 
 type MemberManageRouteProp = RouteProp<MainStackParamList, 'MemberManage'>;
@@ -54,6 +60,10 @@ export default function MemberManageScreen() {
   const createInvite = useCreateInvite(groupId);
   const deleteGroup = useDeleteGroup();
   const leaveGroup = useLeaveGroup();
+
+  // 시안 08: 활성 초대 링크 박스 + 복사
+  const { data: activeInvite } = useActiveInviteQuery(groupId);
+  const inviteUrl = activeInvite ? buildInviteUrl(activeInvite.token) : null;
 
   const [myUserId, setMyUserId] = useState<string | null>(null);
   React.useEffect(() => {
@@ -81,15 +91,49 @@ export default function MemberManageScreen() {
     );
   };
 
+  const handleCopyInvite = async () => {
+    if (!inviteUrl) {
+      setInviteVisible(true); // 활성 링크 없으면 초대 시트에서 발급
+      return;
+    }
+    lightTap();
+    if (isClipboardAvailable) {
+      const ok = await copyToClipboard(inviteUrl);
+      if (ok) {
+        showToast('success', '링크가 복사되었어요');
+        return;
+      }
+    }
+    setInviteVisible(true);
+  };
+
   const canDelete = deleteConfirmText.trim() === DELETE_CONFIRMATION_TEXT && !deleteGroup.isPending;
 
   return (
     <View style={styles.container}>
+      <GlassBackground variant="group" />
+
+      {/* ── 커스텀 헤더 ── */}
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로 가기"
+        >
+          <ChevronLeftIcon size={17} color={colors.ink} strokeWidth={2.4} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle} accessibilityRole="header">
+          그룹 관리
+        </Text>
+      </View>
+
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* 그룹 헤더 */}
+        {/* 그룹 카드 */}
         <View style={styles.groupCard}>
           <View style={styles.groupTile}>
             <Text style={styles.groupEmoji}>{group?.emoji ?? '📁'}</Text>
@@ -102,8 +146,24 @@ export default function MemberManageScreen() {
           </View>
         </View>
 
+        {/* 초대 링크 박스 (시안 08) */}
+        <View style={styles.linkBox}>
+          <Text style={styles.linkText} numberOfLines={1}>
+            {inviteUrl ?? '아직 활성 초대 링크가 없어요'}
+          </Text>
+          <TouchableOpacity
+            style={styles.copyBtn}
+            onPress={handleCopyInvite}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="초대 링크 복사"
+          >
+            <Text style={styles.copyText}>{inviteUrl ? '복사' : '발급'}</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* 멤버 리스트 */}
-        <Text style={styles.sectionLabel}>멤버</Text>
+        <Text style={styles.capsLabel}>{`MEMBERS · ${members.length}`}</Text>
         <View style={styles.card}>
           {members.map((m, i) => (
             <View key={m.userId}>
@@ -120,19 +180,12 @@ export default function MemberManageScreen() {
         </View>
 
         {/* 친구 초대 */}
-        <TouchableOpacity
-          style={styles.inviteBtn}
-          onPress={() => setInviteVisible(true)}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="친구 초대하기"
-        >
-          <PlusIcon size={18} color={colors.primary} strokeWidth={2.4} />
-          <Text style={styles.inviteText}>친구 초대하기</Text>
-        </TouchableOpacity>
+        <Button onPress={() => setInviteVisible(true)} style={styles.inviteBtn}>
+          <PlusIcon size={16} color={colors.white} strokeWidth={2.4} />
+          <Text style={styles.inviteBtnText}>친구 초대</Text>
+        </Button>
 
         {/* 관리 섹션 */}
-        <Text style={styles.sectionLabel}>관리</Text>
         <View style={styles.card}>
           {isOwner ? (
             <>
@@ -169,6 +222,9 @@ export default function MemberManageScreen() {
             </TouchableOpacity>
           )}
         </View>
+        {isOwner && (
+          <Text style={styles.footNote}>{`삭제하려면 "${DELETE_CONFIRMATION_TEXT}" 입력 2단계 확인을 거쳐요`}</Text>
+        )}
       </ScrollView>
 
       {/* 친구 초대 시트 */}
@@ -259,62 +315,108 @@ export default function MemberManageScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: 20 },
-  groupCard: {
+  container: { flex: 1, backgroundColor: '#F6F9FE' },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    backgroundColor: colors.surface,
-    borderRadius: 18,
-    padding: 18,
-    ...shadows.card,
+    gap: 10,
+    paddingHorizontal: 20,
   },
-  groupTile: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: colors.primaryTint,
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: glass.bg,
+    borderWidth: 1,
+    borderColor: glass.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  groupEmoji: { fontSize: 25 },
-  groupInfo: { flex: 1, minWidth: 0, gap: 3 },
-  groupName: { fontSize: 18, fontWeight: '700', color: colors.ink, letterSpacing: -0.36 },
-  groupMeta: { fontSize: 13, fontWeight: '500', color: colors.textFaint },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textFaint,
-    marginTop: 22,
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: 'LINESeedKR-Bold',
+    color: colors.ink,
+    letterSpacing: -0.6, // -0.03em
+  },
+  scroll: { paddingHorizontal: 20, paddingTop: 16 },
+  groupCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: glass.bg,
+    borderWidth: 1,
+    borderColor: glass.border,
+    borderRadius: 18,
+    padding: 13,
+    ...shadows.warmCard,
+  },
+  groupTile: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: warm.tile,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupEmoji: { fontSize: 21 },
+  groupInfo: { flex: 1, minWidth: 0, gap: 2 },
+  groupName: { fontSize: 16, fontFamily: 'LINESeedKR-Bold', color: colors.ink, letterSpacing: -0.32 },
+  groupMeta: { fontSize: 12, fontFamily: 'LINESeedKR', color: colors.textFaint },
+  linkBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 48,
+    backgroundColor: glass.bg,
+    borderWidth: 1,
+    borderColor: glass.border,
+    borderRadius: 16,
+    paddingLeft: 15,
+    paddingRight: 7,
+    marginTop: 12,
+  },
+  linkText: { flex: 1, fontSize: 13, fontFamily: 'LINESeedKR', color: colors.textSub },
+  copyBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 11,
+    height: 34,
+    paddingHorizontal: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  copyText: { fontSize: 13, fontFamily: 'LINESeedKR-Bold', color: colors.white },
+  capsLabel: {
+    ...typo.sectionLabel,
+    color: warm.text,
+    marginTop: 18,
     marginBottom: 9,
     marginLeft: 2,
   },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: glass.bg,
+    borderWidth: 1,
+    borderColor: glass.border,
     borderRadius: 18,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     ...shadows.card,
   },
-  divider: { height: 1, backgroundColor: colors.divider },
-  inviteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    height: 50,
-    borderRadius: 14,
-    backgroundColor: colors.primaryTint,
-    marginTop: 16,
-  },
-  inviteText: { fontSize: 15, fontWeight: '600', color: colors.primary },
+  divider: { height: 1, backgroundColor: 'rgba(20,30,55,0.05)', marginLeft: 51 },
+  inviteBtn: { marginTop: 14, marginBottom: 18 },
+  inviteBtnText: { fontSize: 14, fontFamily: 'LINESeedKR-Bold', color: colors.white },
   menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 16,
+    gap: 11,
+    paddingVertical: 15,
   },
-  menuLabel: { fontSize: 15, fontWeight: '500', color: colors.text },
+  menuLabel: { fontSize: 14, fontFamily: 'LINESeedKR', color: colors.text },
+  footNote: {
+    textAlign: 'center',
+    fontSize: 11,
+    fontFamily: 'LINESeedKR',
+    color: '#B0A183',
+    marginTop: 10,
+  },
   deleteBody: { gap: 20, paddingBottom: 8 },
   deleteBtns: { flexDirection: 'row', gap: 11 },
 });

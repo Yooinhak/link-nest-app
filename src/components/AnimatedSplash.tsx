@@ -99,7 +99,7 @@ export default function AnimatedSplash() {
     >
       <Image source={splashIcon} style={styles.icon} resizeMode="contain" />
       <Animated.Text style={[styles.wordmark, { top: wordmarkTop, opacity: wordmarkOpacity }]}>
-        Link Nest
+        Linkle
       </Animated.Text>
     </Animated.View>
   );
@@ -108,7 +108,8 @@ export default function AnimatedSplash() {
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.white,
+    // 네이티브 스플래시(app.json plugin backgroundColor)와 동일해야 전환이 안 보인다
+    backgroundColor: '#6D5EF0', // Linkle 브랜드 인디고
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 999,
@@ -122,8 +123,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignSelf: 'center',
     fontSize: 22,
-    fontWeight: '800',
-    color: colors.ink,
+    fontFamily: 'LINESeedKR-Bold',
+    color: colors.white, // 인디고 배경 위 흰 워드마크
     letterSpacing: -0.66, // -0.03em
   },
 });

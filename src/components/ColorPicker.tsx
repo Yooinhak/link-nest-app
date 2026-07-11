@@ -59,7 +59,7 @@ export default function ColorPicker({ selected, onSelect, label = '색상' }: Co
 
 const styles = StyleSheet.create({
   container: { marginTop: 20, gap: 11 },
-  label: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+  label: { fontSize: 13, fontFamily: 'LINESeedKR-Bold', color: colors.textMuted },
   row: { flexDirection: 'row', gap: 11 },
   swatch: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   swatchSelected: { borderWidth: 3 },

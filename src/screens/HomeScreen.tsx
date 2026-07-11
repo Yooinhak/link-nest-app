@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 
-import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,19 +13,19 @@ import Button from '../components/Button';
 import ColorPicker from '../components/ColorPicker';
 import ContextMenu, { ContextMenuItem } from '../components/ContextMenu';
 import EmptyState from '../components/EmptyState';
-import { ChevronDownIcon, ChevronRightIcon, FolderIcon, PencilIcon, TrashIcon } from '../components/icons';
+import GlassBackground from '../components/GlassBackground';
+import GroupRail from '../components/GroupRail';
+import { FolderIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/icons';
 import Input from '../components/Input';
 import CreateGroupSheet from '../components/sheets/CreateGroupSheet';
-import GroupSwitcherSheet from '../components/sheets/GroupSwitcherSheet';
 import InviteAcceptSheet from '../components/sheets/InviteAcceptSheet';
 import InviteSheet from '../components/sheets/InviteSheet';
+import SaveLinkSheet from '../components/sheets/SaveLinkSheet';
 import { useToast } from '../components/Toast';
-import { colors, FolderColorKey, getFolderColor, shadows } from '../constants/theme';
+import { colors, FolderColorKey, getFolderColor, glass, shadows, typo, warm } from '../constants/theme';
 import { useGroup } from '../contexts/GroupContext';
 import {
-  useAllFoldersQuery,
   useCreateFolder,
-  useCreatePost,
   useDeferredDeleteFolder,
   useFoldersQuery,
   useGroupMembersQuery,
@@ -38,10 +37,7 @@ import { MainStackParamList } from '../navigation/types';
 
 type Nav = NativeStackNavigationProp<MainStackParamList, 'MainTabs'>;
 
-const RECENT_FOLDER_KEY = 'linknest.recentFolderId';
-const ONBOARDING_KEY = 'linknest.groupOnboardingSeen';
-
-// B-5: FlatList 성능 최적화 — 외부 컴포넌트 + React.memo.
+// ── 폴더 그리드 (블루 글래스 시안 02/06: 2열 유리 카드) ──────────
 type FolderItem = {
   id: number;
   name: string;
@@ -49,16 +45,31 @@ type FolderItem = {
   posts?: Array<{ count: number }>;
 };
 
-type FolderRowProps = {
+/** 그리드 데이터 = 폴더 + (편집 가능 시) '새 폴더' 타일 */
+type GridItem = { kind: 'folder'; folder: FolderItem } | { kind: 'add' };
+
+type FolderCardProps = {
   item: FolderItem;
   postCount: number;
   canEdit: boolean;
+  warmTone: boolean;
+  /** 2열 그리드 카드 폭 (픽셀 고정 — flex 계산은 numColumns 와 조합 시 폭이 깨지는 사례 있음) */
+  width: number;
   onOpen: (id: number, name: string, color: string | null) => void;
   onEdit: (id: number, name: string, color: FolderColorKey) => void;
   onDelete: (id: number) => void;
 };
 
-const FolderRow = React.memo(function FolderRow({ item, postCount, canEdit, onOpen, onEdit, onDelete }: FolderRowProps) {
+const FolderCard = React.memo(function FolderCard({
+  item,
+  postCount,
+  canEdit,
+  warmTone,
+  width,
+  onOpen,
+  onEdit,
+  onDelete,
+}: FolderCardProps) {
   const fc = getFolderColor(item.color);
   const menuItems: ContextMenuItem[] = [
     {
@@ -76,131 +87,69 @@ const FolderRow = React.memo(function FolderRow({ item, postCount, canEdit, onOp
 
   return (
     <TouchableOpacity
-      style={styles.folderRow}
+      style={[styles.folderCard, { width }, warmTone ? shadows.warmCard : shadows.glassCard]}
       onPress={() => onOpen(item.id, item.name, item.color)}
-      activeOpacity={0.5}
+      activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel={`${item.name} 폴더, ${postCount}개의 링크`}
     >
-      <View style={[styles.folderIconWrap, { backgroundColor: fc.bg }]}>
-        <FolderIcon size={20} color={fc.icon} />
+      <View style={[styles.folderTile, { backgroundColor: fc.bg }]}>
+        <FolderIcon size={17} color={fc.icon} />
       </View>
-      <View style={styles.folderInfo}>
-        <Text style={styles.folderName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.folderCount}>{postCount}개의 링크</Text>
-      </View>
-      <View style={styles.folderRight}>
-        {canEdit && (
+      <Text style={styles.folderName} numberOfLines={1}>
+        {item.name}
+      </Text>
+      <Text style={styles.folderCount}>{postCount} LINKS</Text>
+
+      {canEdit && (
+        <View style={styles.folderMenu}>
           <ContextMenu
             items={menuItems}
-            trigger={<View style={styles.moreBtn}><Text style={styles.moreDots}>···</Text></View>}
+            trigger={
+              <View style={styles.folderMenuBtn}>
+                <Text style={styles.folderMenuDots}>···</Text>
+              </View>
+            }
           />
-        )}
-        <ChevronRightIcon size={16} color={colors.iconFaint} />
-      </View>
+        </View>
+      )}
     </TouchableOpacity>
   );
 });
+
+// 그리드 레이아웃 상수 — list paddingHorizontal 22 / 열 간격 11 과 동기화
+const GRID_H_PADDING = 22;
+const GRID_GAP = 11;
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const { showToast } = useToast();
 
+  // 2열 카드 폭을 픽셀로 고정 (flex:1 + maxWidth% 는 특정 조합에서 폭이 붕괴 — 2026-07-11 실기기)
+  const { width: windowWidth } = useWindowDimensions();
+  const cardWidth = Math.floor((windowWidth - GRID_H_PADDING * 2 - GRID_GAP) / 2);
+
   // ── 그룹 상태 ──────────────────────────────────────────────
-  const { groups, currentGroup, currentGroupId, myRole, isPersonal, selectGroup } = useGroup();
+  const { currentGroup, currentGroupId, myRole, isPersonal } = useGroup();
   const canEdit = myRole !== 'viewer';
 
-  // 공유 그룹이면 멤버 아바타 스택 표시 (탭 → 멤버 관리)
+  // 공유 그룹이면 멤버 아바타 스택 표시 (탭 → 그룹 관리)
   const { data: members = [] } = useGroupMembersQuery(!isPersonal ? currentGroupId : null);
 
   // ── 시트/딥링크 상태 ───────────────────────────────────────
-  const [switcherVisible, setSwitcherVisible] = useState(false);
   const [createGroupVisible, setCreateGroupVisible] = useState(false);
   const [inviteTarget, setInviteTarget] = useState<{ id: string; name: string } | null>(null);
   const { inviteToken, clearInviteToken } = useInviteDeepLink();
-
-  // 1회성 온보딩 툴팁 (시안 ①)
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  useEffect(() => {
-    AsyncStorage.getItem(ONBOARDING_KEY).then((seen) => {
-      if (!seen) setShowOnboarding(true);
-    });
-  }, []);
-  const dismissOnboarding = () => {
-    setShowOnboarding(false);
-    AsyncStorage.setItem(ONBOARDING_KEY, '1').catch(() => {});
-  };
 
   // ── 폴더 데이터 ────────────────────────────────────────────
   const { data: folderList, refetch, isRefetching } = useFoldersQuery(currentGroupId);
   const createFolder = useCreateFolder(currentGroupId);
   const updateFolder = useUpdateFolder(currentGroupId);
   const deferredDelete = useDeferredDeleteFolder(currentGroupId);
-  const createPost = useCreatePost();
 
-  // ── 공유 인텐트: 그룹별 섹션 폴더 선택 (시안 ⑥) ─────────────
+  // ── 공유 인텐트 → 저장 위치 선택 시트 (시안 09) ─────────────
   const { pendingUrl, clearPendingUrl } = useShareIntent();
-  const [shareSheetVisible, setShareSheetVisible] = useState(false);
-  const { data: allFolders } = useAllFoldersQuery(shareSheetVisible);
-  const [recentFolderId, setRecentFolderId] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (pendingUrl) {
-      AsyncStorage.getItem(RECENT_FOLDER_KEY).then((v) => setRecentFolderId(v ? Number(v) : null));
-      setShareSheetVisible(true);
-    }
-  }, [pendingUrl]);
-
-  const roleByGroup = useMemo(() => new Map(groups.map((g) => [g.id, g.role])), [groups]);
-
-  type AnyFolder = FolderItem & { group: { id: string; name: string; emoji: string | null; type: string } | null };
-  const shareSections = useMemo(() => {
-    const list = (allFolders ?? []) as unknown as AnyFolder[];
-    const byGroup = new Map<string, { name: string; emoji: string | null; type: string; folders: AnyFolder[] }>();
-    for (const f of list) {
-      if (!f.group) continue;
-      const entry = byGroup.get(f.group.id) ?? {
-        name: f.group.name,
-        emoji: f.group.emoji,
-        type: f.group.type,
-        folders: [],
-      };
-      entry.folders.push(f);
-      byGroup.set(f.group.id, entry);
-    }
-    return [...byGroup.entries()]
-      .map(([id, v]) => ({ id, ...v, viewer: roleByGroup.get(id) === 'viewer' }))
-      .sort((a, b) => (a.type === b.type ? 0 : a.type === 'personal' ? -1 : 1));
-  }, [allFolders, roleByGroup]);
-
-  const recentFolder = useMemo(() => {
-    if (!recentFolderId || !allFolders) return null;
-    const list = allFolders as unknown as AnyFolder[];
-    const f = list.find((x) => x.id === recentFolderId);
-    return f && roleByGroup.get(f.group?.id ?? '') !== 'viewer' ? f : null;
-  }, [recentFolderId, allFolders, roleByGroup]);
-
-  const handleSaveSharedUrl = (folderId: number) => {
-    if (!pendingUrl) return;
-    createPost.mutate(
-      { url: pendingUrl, description: null, folder_id: folderId },
-      {
-        onSuccess: () => {
-          AsyncStorage.setItem(RECENT_FOLDER_KEY, String(folderId)).catch(() => {});
-        },
-        onSettled: () => {
-          clearPendingUrl();
-          setShareSheetVisible(false);
-        },
-      },
-    );
-  };
-
-  const handleCancelShare = () => {
-    clearPendingUrl();
-    setShareSheetVisible(false);
-  };
 
   // ── 폴더 CRUD 시트 상태 ────────────────────────────────────
   const [createVisible, setCreateVisible] = useState(false);
@@ -210,6 +159,12 @@ export default function HomeScreen() {
   const [folderColor, setFolderColor] = useState<FolderColorKey>('blue');
   const [editTarget, setEditTarget] = useState<{ id: number; name: string; color: FolderColorKey } | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+
+  const openCreateFolder = useCallback(() => {
+    setFolderName('');
+    setFolderColor('blue');
+    setCreateVisible(true);
+  }, []);
 
   const handleCreate = () => {
     if (!folderName.trim()) {
@@ -272,93 +227,106 @@ export default function HomeScreen() {
     setDeleteVisible(true);
   }, []);
 
+  // ── 그리드 데이터: 폴더 + '새 폴더' 대시 타일 ────────────────
+  const gridData = useMemo<GridItem[]>(() => {
+    const items: GridItem[] = ((folderList ?? []) as FolderItem[]).map((f) => ({ kind: 'folder', folder: f }));
+    if (canEdit && items.length > 0) items.push({ kind: 'add' });
+    return items;
+  }, [folderList, canEdit]);
+
   const renderItem = useCallback(
-    ({ item }: { item: FolderItem }) => (
-      <FolderRow
-        item={item}
-        postCount={getPostCount(item)}
-        canEdit={canEdit}
-        onOpen={handleOpenFolder}
-        onEdit={handleEditFolder}
-        onDelete={handleDeleteFolder}
-      />
-    ),
-    [canEdit, handleOpenFolder, handleEditFolder, handleDeleteFolder],
+    ({ item }: { item: GridItem }) => {
+      if (item.kind === 'add') {
+        return (
+          <TouchableOpacity
+            style={[
+              styles.addTile,
+              { width: cardWidth, borderColor: isPersonal ? 'rgba(139,126,242,0.45)' : 'rgba(249,115,22,0.4)' },
+            ]}
+            onPress={openCreateFolder}
+            activeOpacity={0.65}
+            accessibilityRole="button"
+            accessibilityLabel="새 폴더 만들기"
+          >
+            <View style={styles.addTileCircle}>
+              <PlusIcon size={15} color={isPersonal ? colors.primary : warm.accent} strokeWidth={2.4} />
+            </View>
+            <Text style={[styles.addTileText, !isPersonal && { color: warm.text }]}>새 폴더</Text>
+          </TouchableOpacity>
+        );
+      }
+      return (
+        <FolderCard
+          item={item.folder}
+          postCount={getPostCount(item.folder)}
+          canEdit={canEdit}
+          warmTone={!isPersonal}
+          width={cardWidth}
+          onOpen={handleOpenFolder}
+          onEdit={handleEditFolder}
+          onDelete={handleDeleteFolder}
+        />
+      );
+    },
+    [canEdit, isPersonal, cardWidth, openCreateFolder, handleOpenFolder, handleEditFolder, handleDeleteFolder],
   );
 
-  const keyExtractor = useCallback((item: FolderItem) => String(item.id), []);
+  const keyExtractor = useCallback((item: GridItem) => (item.kind === 'add' ? 'add-tile' : String(item.folder.id)), []);
 
   const folderCount = folderList?.length ?? 0;
   const totalLinks = (folderList ?? []).reduce((sum, f) => sum + getPostCount(f as FolderItem), 0);
-  const groupTileEmoji = isPersonal ? '🏠' : (currentGroup?.emoji ?? '📁');
+  const displayName = isPersonal ? '나의 서랍' : (currentGroup?.name ?? '나의 서랍');
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* ── 헤더: 그룹 스위처 + 아바타 스택 + 새 폴더 ── */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity
-            style={styles.switcher}
-            onPress={() => {
-              dismissOnboarding();
-              setSwitcherVisible(true);
-            }}
-            activeOpacity={0.6}
-            accessibilityRole="button"
-            accessibilityLabel="그룹 전환"
-          >
-            <Text style={styles.switcherEmoji}>{groupTileEmoji}</Text>
-            <Text style={styles.switcherName} numberOfLines={1}>
-              {currentGroup?.name ?? '내 그룹'}
-            </Text>
-            <ChevronDownIcon size={18} color={colors.textFaint} />
-          </TouchableOpacity>
-          {folderCount > 0 && (
-            <Text style={styles.headerSub}>{`폴더 ${folderCount}개 · 링크 ${totalLinks}개`}</Text>
-          )}
-        </View>
+    <View style={styles.container}>
+      {/* 공기 배경 — 개인 = 블루, 공유 그룹 = 웜 */}
+      <GlassBackground variant={isPersonal ? 'personal' : 'group'} />
 
-        <View style={styles.headerRight}>
-          {!isPersonal && members.length > 0 && (
-            <TouchableOpacity
-              onPress={() => currentGroupId && navigation.navigate('MemberManage', { groupId: currentGroupId })}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="멤버 관리"
+      <View style={{ paddingTop: insets.top + 10 }}>
+        {/* ── 채널 레일: 그룹 전환 ── */}
+        <GroupRail onCreateGroup={() => setCreateGroupVisible(true)} />
+
+        {/* ── 타이틀 블록 ── */}
+        <View style={styles.titleRow}>
+          <View style={styles.titleLeft}>
+            <Text style={styles.title} numberOfLines={1}>
+              {displayName}
+            </Text>
+            {isPersonal ? (
+              <Text style={styles.subMeta}>{`${totalLinks}개의 링크 · 폴더 ${folderCount}개`}</Text>
+            ) : (
+              <TouchableOpacity
+                style={styles.memberRow}
+                onPress={() => currentGroupId && navigation.navigate('MemberManage', { groupId: currentGroupId })}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="그룹 관리"
+              >
+                {members.length > 0 && <AvatarStack members={members} size={22} />}
+                <Text style={styles.warmMeta}>{`멤버 ${members.length}명 · ${totalLinks}개의 링크`}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {!isPersonal && currentGroupId && (
+            <Button
+              variant="glass"
+              size="small"
+              onPress={() => setInviteTarget({ id: currentGroupId, name: currentGroup?.name ?? '' })}
             >
-              <AvatarStack members={members} size={28} />
-            </TouchableOpacity>
-          )}
-          {canEdit && (
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={() => {
-                setFolderName('');
-                setFolderColor('blue');
-                setCreateVisible(true);
-              }}
-              activeOpacity={0.6}
-              accessibilityRole="button"
-              accessibilityLabel="새 폴더 만들기"
-            >
-              <Text style={styles.addBtnText}>+ 새 폴더</Text>
-            </TouchableOpacity>
+              + 초대
+            </Button>
           )}
         </View>
       </View>
 
-      {/* 1회성 온보딩 툴팁 */}
-      {showOnboarding && (
-        <TouchableOpacity style={styles.tooltip} onPress={dismissOnboarding} activeOpacity={0.9}>
-          <Text style={styles.tooltipText}>이제 친구와 함께 링크를 모을 수 있어요 👆</Text>
-        </TouchableOpacity>
-      )}
-
       <FlatList
-        data={(folderList ?? []) as FolderItem[]}
+        data={gridData}
+        key="folder-grid-2col"
+        numColumns={2}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
-        contentContainerStyle={[styles.list, { paddingBottom: 100 + insets.bottom }]}
+        columnWrapperStyle={styles.gridRow}
+        contentContainerStyle={[styles.list, { paddingBottom: 130 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews
         initialNumToRender={10}
@@ -371,17 +339,23 @@ export default function HomeScreen() {
           <EmptyState
             type="folder"
             title="폴더가 없어요"
-            subtitle={isPersonal ? '새 폴더를 만들어 링크를 정리해보세요' : '친구와 함께 첫 폴더를 만들어보세요'}
-          />
+            subtitle={
+              isPersonal
+                ? '인스타에서 본 맛집, 유튜브에서 본 카페 —\n폴더를 만들어 링크를 모아보세요'
+                : '친구와 함께 첫 폴더를 만들어보세요'
+            }
+            warmTone={!isPersonal}
+          >
+            {canEdit && (
+              <Button size="small" onPress={openCreateFolder}>
+                ＋ 첫 폴더 만들기
+              </Button>
+            )}
+          </EmptyState>
         }
       />
 
       {/* ── 그룹 시트들 ── */}
-      <GroupSwitcherSheet
-        visible={switcherVisible}
-        onClose={() => setSwitcherVisible(false)}
-        onCreateGroup={() => setCreateGroupVisible(true)}
-      />
       <CreateGroupSheet
         visible={createGroupVisible}
         onClose={() => setCreateGroupVisible(false)}
@@ -395,13 +369,16 @@ export default function HomeScreen() {
       />
       <InviteAcceptSheet token={inviteToken} onClose={clearInviteToken} />
 
+      {/* ── 공유 인텐트 → 저장 위치 선택 (시안 09) ── */}
+      <SaveLinkSheet visible={!!pendingUrl} onClose={clearPendingUrl} initialUrl={pendingUrl} />
+
       {/* ── 폴더 생성 ── */}
       <BottomSheet visible={createVisible} onClose={() => setCreateVisible(false)} title="새 폴더" description="링크를 모아볼 폴더를 만들어보세요">
         <Input placeholder="폴더 이름을 입력해주세요" value={folderName} onChangeText={setFolderName} autoFocus />
         <ColorPicker selected={folderColor} onSelect={setFolderColor} label="폴더 색상" />
         <View style={styles.sheetBtns}>
           <Button variant="secondary" onPress={() => setCreateVisible(false)} style={{ flex: 1 }}>닫기</Button>
-          <Button onPress={handleCreate} loading={createFolder.isPending} style={{ flex: 1 }}>만들기</Button>
+          <Button onPress={handleCreate} loading={createFolder.isPending} style={{ flex: 1.4 }}>만들기</Button>
         </View>
       </BottomSheet>
 
@@ -411,178 +388,89 @@ export default function HomeScreen() {
         <ColorPicker selected={editTarget?.color ?? 'blue'} onSelect={(c) => setEditTarget((p) => (p ? { ...p, color: c } : null))} label="폴더 색상" />
         <View style={styles.sheetBtns}>
           <Button variant="secondary" onPress={() => setEditVisible(false)} style={{ flex: 1 }}>취소</Button>
-          <Button onPress={handleUpdate} loading={updateFolder.isPending} style={{ flex: 1 }}>저장</Button>
+          <Button onPress={handleUpdate} loading={updateFolder.isPending} style={{ flex: 1.4 }}>저장</Button>
         </View>
       </BottomSheet>
 
       <AlertDialog visible={deleteVisible} onClose={() => setDeleteVisible(false)} title="폴더를 삭제할까요?" description="폴더 안의 모든 링크도 함께 삭제돼요" confirmText="삭제" onConfirm={handleDelete} destructive />
-
-      {/* ── 공유 인텐트: 그룹별 폴더 선택 (시안 ⑥) ── */}
-      <BottomSheet
-        visible={shareSheetVisible}
-        onClose={handleCancelShare}
-        title="어느 폴더에 담을까요?"
-        description={pendingUrl ? `공유된 링크: ${pendingUrl}` : undefined}
-      >
-        {shareSections.length > 0 ? (
-          <View style={styles.shareList}>
-            {recentFolder && (
-              <>
-                <Text style={styles.shareSectionLabel}>최근 저장한 폴더</Text>
-                <ShareFolderRow folder={recentFolder} locked={false} onPress={() => handleSaveSharedUrl(recentFolder.id)} disabled={createPost.isPending} />
-              </>
-            )}
-            {shareSections.map((section) => (
-              <View key={section.id}>
-                <Text style={styles.shareSectionLabel}>
-                  {section.type === 'personal' ? '🏠 내 그룹' : `${section.emoji ?? '📁'} ${section.name}`}
-                </Text>
-                {section.folders.map((f) => (
-                  <ShareFolderRow
-                    key={f.id}
-                    folder={f}
-                    locked={section.viewer}
-                    onPress={() => handleSaveSharedUrl(f.id)}
-                    disabled={createPost.isPending}
-                  />
-                ))}
-              </View>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.shareEmpty}>
-            <Text style={styles.shareEmptyText}>폴더가 없어요. 먼저 폴더를 만들어주세요.</Text>
-            <Button
-              onPress={() => {
-                handleCancelShare();
-                setFolderName('');
-                setFolderColor('blue');
-                setCreateVisible(true);
-              }}
-            >
-              폴더 만들기
-            </Button>
-          </View>
-        )}
-      </BottomSheet>
     </View>
   );
 }
 
-/** 공유 저장 시트의 폴더 행 — viewer 그룹 폴더는 자물쇠 + 흐림 (시안 ⑥) */
-function ShareFolderRow({
-  folder,
-  locked,
-  disabled,
-  onPress,
-}: {
-  folder: FolderItem;
-  locked: boolean;
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  const { showToast } = useToast();
-  const fc = getFolderColor(folder.color);
-
-  return (
-    <TouchableOpacity
-      style={[styles.shareFolderRow, locked && { opacity: 0.4 }]}
-      onPress={() => {
-        if (locked) {
-          showToast('error', '권한이 없어요');
-          return;
-        }
-        onPress();
-      }}
-      activeOpacity={locked ? 1 : 0.6}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={locked ? `${folder.name} — 보기 전용` : `${folder.name}에 저장`}
-    >
-      <View style={[styles.folderIconWrap, { backgroundColor: fc.bg }]}>
-        <FolderIcon size={20} color={fc.icon} />
-      </View>
-      <Text style={styles.shareFolderName} numberOfLines={1}>{folder.name}</Text>
-      {locked && <Text style={styles.lockEmoji}>🔒</Text>}
-    </TouchableOpacity>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  header: {
+  container: { flex: 1, backgroundColor: '#F6F9FE' },
+  titleRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     paddingTop: 16,
-    paddingBottom: 6,
     gap: 10,
   },
-  headerLeft: { flexShrink: 1 },
-  switcher: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
-  switcherEmoji: { fontSize: 22 },
-  switcherName: {
-    fontSize: 24,
-    fontWeight: '800',
+  titleLeft: { flexShrink: 1 },
+  title: {
+    fontSize: 26,
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.ink,
-    letterSpacing: -0.96, // -0.04em
-    flexShrink: 1,
+    letterSpacing: -1.04, // -0.04em
   },
-  headerSub: { fontSize: 13, fontWeight: '500', color: colors.textFaint, marginTop: 5 },
-  headerRight: {
-    flexDirection: 'row',
+  subMeta: { fontSize: 13, fontFamily: 'LINESeedKR', color: '#6A6488', marginTop: 4 }, // 라벤더 공기 위 메타 (v3)
+  memberRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 6 },
+  warmMeta: { fontSize: 12, fontFamily: 'LINESeedKR', color: warm.text },
+  list: { paddingHorizontal: 22, paddingTop: 14 },
+  gridRow: { gap: 11 },
+  folderCard: {
+    // width 는 렌더 시 픽셀로 주입 (cardWidth)
+    height: 102,
+    backgroundColor: glass.bg,
+    borderWidth: 1,
+    borderColor: glass.border,
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 13,
+    marginBottom: 11,
+  },
+  folderTile: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
     alignItems: 'center',
-    gap: 10,
-    paddingTop: 3,
+    justifyContent: 'center',
   },
-  addBtn: { backgroundColor: colors.primaryTint, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20 },
-  addBtnText: { fontSize: 14, fontWeight: '600', color: colors.primary },
-  tooltip: {
-    alignSelf: 'flex-start',
-    marginLeft: 20,
-    marginTop: 6,
-    backgroundColor: colors.ink,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    ...shadows.card,
+  folderName: {
+    fontSize: 14,
+    fontFamily: 'LINESeedKR-Bold',
+    color: colors.ink,
+    letterSpacing: -0.28, // -0.02em
+    marginTop: 8,
   },
-  tooltipText: { fontSize: 13, fontWeight: '500', color: colors.white },
-  list: { paddingHorizontal: 20, paddingTop: 10 },
-  folderRow: {
-    flexDirection: 'row',
+  folderCount: {
+    ...typo.count,
+    fontSize: 11,
+    marginTop: 1,
+  },
+  folderMenu: { position: 'absolute', top: 8, right: 8 },
+  folderMenuBtn: { padding: 5 },
+  folderMenuDots: { fontSize: 16, color: colors.textDisabled, fontFamily: 'LINESeedKR' },
+  addTile: {
+    // width 는 렌더 시 픽셀로 주입 (cardWidth)
+    height: 102,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderRadius: 18,
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    paddingHorizontal: 15,
-    paddingVertical: 14,
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 11,
+  },
+  addTileCircle: {
+    width: 32,
+    height: 32,
     borderRadius: 16,
-    marginBottom: 9,
-    ...shadows.card,
+    backgroundColor: glass.bgStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  folderIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 13 },
-  folderInfo: { flex: 1, gap: 2 },
-  folderName: { fontSize: 16, fontWeight: '600', color: colors.text, letterSpacing: -0.32 },
-  shareFolderName: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text, letterSpacing: -0.32 },
-  folderCount: { fontSize: 12, fontWeight: '500', color: colors.textDisabled },
-  folderRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  moreBtn: { padding: 6 },
-  moreDots: { fontSize: 18, color: colors.textDisabled, fontWeight: '400' },
+  addTileText: { fontSize: 12, fontFamily: 'LINESeedKR-Bold', color: colors.textMuted },
   sheetBtns: { flexDirection: 'row', gap: 10, marginTop: 26, marginBottom: 8 },
-  shareList: { paddingBottom: 8, maxHeight: 420 },
-  shareSectionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textFaint,
-    marginTop: 14,
-    marginBottom: 6,
-  },
-  shareFolderRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4, borderRadius: 12, gap: 13 },
-  lockEmoji: { fontSize: 14 },
-  shareEmpty: { alignItems: 'center', gap: 16, paddingVertical: 20 },
-  shareEmptyText: { fontSize: 15, fontWeight: '500', color: colors.textFaint },
 });

@@ -16,7 +16,7 @@ import Reanimated, {
 import Svg, { Path } from 'react-native-svg';
 import { runOnJS } from 'react-native-worklets';
 
-import { colors, shadows } from '../constants/theme';
+import { colors, glass, shadows } from '../constants/theme';
 import { useDeferredDeletePost } from '../hooks/queries';
 import { getDomainInfo } from '../utils/domainInfo';
 import { selectionTap, warningTap } from '../utils/haptics';
@@ -357,23 +357,33 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
         accessibilityRole="link"
         accessibilityLabel={`${metadata?.title || domain} 링크 열기`}
       >
-        {/* Thumbnail */}
+        {/* Thumbnail + 도메인 배지 오버레이 (시안 07: INSTAGRAM 스타일) */}
         {isLoading ? (
-          <Skeleton width="100%" height={120} borderRadius={12} />
-        ) : metadata?.image && !imageFailed ? (
-          <Image
-            source={{ uri: metadata.image }}
-            style={styles.thumbnail}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={200}
-            onError={() => setImageFailed(true)}
-          />
+          <Skeleton width="100%" height={110} borderRadius={12} />
         ) : (
-          // 시안 04: 메타 이미지가 없으면 틴트 배경 + 흰 이니셜 타일 (그라데이션 근사)
-          <View style={styles.thumbnailFallback}>
-            <View style={styles.thumbnailFallbackTile}>
-              <Text style={styles.thumbnailFallbackText}>{domain.charAt(0).toUpperCase()}</Text>
+          <View>
+            {metadata?.image && !imageFailed ? (
+              <Image
+                source={{ uri: metadata.image }}
+                style={styles.thumbnail}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={200}
+                onError={() => setImageFailed(true)}
+              />
+            ) : (
+              // 메타 이미지가 없으면 틴트 배경 + 흰 이니셜 타일
+              <View style={styles.thumbnailFallback}>
+                <View style={styles.thumbnailFallbackTile}>
+                  <Text style={styles.thumbnailFallbackText}>{domain.charAt(0).toUpperCase()}</Text>
+                </View>
+              </View>
+            )}
+            <View style={styles.domainBadge}>
+              <FaviconBadge url={url} size={11} />
+              <Text style={styles.domainBadgeText} numberOfLines={1}>
+                {domainLabel.toUpperCase()}
+              </Text>
             </View>
           </View>
         )}
@@ -395,19 +405,14 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
                   {metadata.description}
                 </Text>
               )}
-              <View style={styles.domainRow}>
-                <FaviconBadge url={url} size={16} />
-                <Text style={styles.domain} numberOfLines={1}>
-                  {domainLabel}
-                </Text>
-              </View>
             </>
           )}
 
+          {/* 메모 — 시안 07: 💬 인용 박스 (파란 좌측 보더) */}
           {userDescription && (
             <View style={styles.memo}>
               <Text style={styles.memoText} numberOfLines={2}>
-                {userDescription}
+                💬 {userDescription}
               </Text>
             </View>
           )}
@@ -510,50 +515,53 @@ const swipeStyles = StyleSheet.create({
   },
   rightActionText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.white,
     marginTop: 4,
   },
 });
 
 const compactStyles = StyleSheet.create({
+  // 블루 글래스 시안 07: 유리 카드 (반투명 흰 + 흰 보더) — 그림자 없음 (유리 표면 규칙)
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 13,
-    gap: 12,
+    backgroundColor: glass.bg,
+    borderWidth: 1,
+    borderColor: glass.border,
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 11,
     ...shadows.card,
   },
   thumbnail: {
-    width: 40,
-    height: 40,
-    borderRadius: 11,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     backgroundColor: colors.divider,
   },
   thumbnailFallback: {
-    width: 40,
-    height: 40,
-    borderRadius: 11,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     backgroundColor: colors.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
   thumbnailFallbackText: {
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 18,
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.primary,
   },
   body: {
     flex: 1,
     minWidth: 0,
-    gap: 3,
+    gap: 2,
   },
   title: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.ink,
     letterSpacing: -0.28, // -0.02em
   },
@@ -565,13 +573,13 @@ const compactStyles = StyleSheet.create({
   domain: {
     flex: 1,
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: 'LINESeedKR',
     color: colors.textDisabled,
   },
   memo: {
     fontSize: 12,
     color: colors.primary,
-    fontWeight: '500',
+    fontFamily: 'LINESeedKR',
     marginTop: 1,
   },
   actions: {
@@ -579,9 +587,9 @@ const compactStyles = StyleSheet.create({
     alignItems: 'center',
   },
   actionBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: colors.fieldBg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -592,25 +600,47 @@ const styles = StyleSheet.create({
   // 그림자와 클리핑 공존: overflow hidden 은 iOS 그림자를 죽이므로
   // 카드에는 그림자만 두고, 썸네일에 상단 radius 를 직접 지정한다.
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    ...shadows.bigCard,
+    backgroundColor: glass.bg,
+    borderWidth: 1,
+    borderColor: glass.border,
+    borderRadius: 18,
+    ...shadows.glassCard,
   },
   thumbnail: {
     width: '100%',
-    height: 120,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    height: 110,
+    borderTopLeftRadius: 17,
+    borderTopRightRadius: 17,
     backgroundColor: colors.divider,
   },
   thumbnailFallback: {
     width: '100%',
-    height: 120,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    height: 110,
+    borderTopLeftRadius: 17,
+    borderTopRightRadius: 17,
     backgroundColor: colors.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // 시안 07: 썸네일 위 도메인 배지 — 유리 칩 + 대문자
+  domainBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    maxWidth: '70%',
+  },
+  domainBadgeText: {
+    fontSize: 9.5,
+    fontFamily: 'LINESeedKR-Bold',
+    letterSpacing: 0.8,
+    color: colors.textMuted,
   },
   thumbnailFallbackTile: {
     width: 48,
@@ -627,26 +657,26 @@ const styles = StyleSheet.create({
   },
   thumbnailFallbackText: {
     fontSize: 22,
-    fontWeight: '800',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.primary,
   },
   body: {
-    paddingVertical: 13,
-    paddingHorizontal: 15,
-    gap: 6,
+    paddingVertical: 11,
+    paddingHorizontal: 13,
+    gap: 5,
   },
   title: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.ink,
-    letterSpacing: -0.3, // -0.02em
-    lineHeight: 21,
+    letterSpacing: -0.28, // -0.02em
+    lineHeight: 20,
   },
   description: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 12.5,
+    fontFamily: 'LINESeedKR',
     color: colors.textFaint,
-    lineHeight: 19,
+    lineHeight: 18,
   },
   domainRow: {
     flexDirection: 'row',
@@ -657,35 +687,39 @@ const styles = StyleSheet.create({
   domain: {
     flexShrink: 1,
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'LINESeedKR',
     color: colors.textDisabled,
   },
+  // 시안 07: 💬 인용 박스 — 파란 좌측 보더 + 연한 파랑 배경
   memo: {
-    backgroundColor: colors.primaryTint,
-    borderRadius: 9,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-    marginTop: 6,
+    backgroundColor: 'rgba(139,126,242,0.1)',
+    borderLeftWidth: 2,
+    borderLeftColor: colors.primary,
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 4,
   },
   memoText: {
     fontSize: 12,
-    color: colors.primary,
+    color: colors.textSub,
     lineHeight: 17,
-    fontWeight: '500',
+    fontFamily: 'LINESeedKR',
   },
   addedByRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 10,
-    paddingTop: 10,
+    marginTop: 8,
+    paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: colors.divider,
+    borderTopColor: 'rgba(20,30,55,0.06)',
   },
   addedByText: {
     flex: 1,
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'LINESeedKR',
     color: colors.textFaint,
   },
   topActions: {

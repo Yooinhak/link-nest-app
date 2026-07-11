@@ -1,27 +1,25 @@
 {
   "expo": {
-    "name": "Link Nest",
-    "slug": "link-nest-app",
+    "name": "Linkle",
+    "slug": "linkle-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "scheme": "link-nest-app",
+    "scheme": "linkle-app",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "dev.inak.linknest",
+      "bundleIdentifier": "dev.inak.linkle",
       "appleTeamId": "ARPM23GNDZ",
       "_usesAppleSignIn_TODO": "Apple Developer 멤버십 가입 후 true로 복원",
       "usesAppleSignIn": false
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#3182F6",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#6D5EF0",
+        "foregroundImage": "./assets/adaptive-icon.png"
       },
-      "package": "dev.inak.linknest",
+      "package": "dev.inak.linkle",
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -33,15 +31,15 @@
         {
           "image": "./assets/splash-icon.png",
           "imageWidth": 224,
-          "backgroundColor": "#FFFFFF"
+          "backgroundColor": "#6D5EF0"
         }
       ],
       "expo-web-browser",
       [
         "@sentry/react-native/expo",
         {
-          "organization": "link-nest",
-          "project": "link-nest-app"
+          "organization": "linkle",
+          "project": "linkle-app"
         }
       ]
     ],

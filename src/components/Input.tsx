@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.textSub,
     marginLeft: 4,
   },
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: 'LINESeedKR',
     color: colors.ink,
   },
   inputError: {

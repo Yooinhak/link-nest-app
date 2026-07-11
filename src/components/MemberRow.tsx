@@ -74,12 +74,12 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.ink,
   },
   me: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'LINESeedKR',
     color: colors.textDisabled,
   },
   moreBtn: {
