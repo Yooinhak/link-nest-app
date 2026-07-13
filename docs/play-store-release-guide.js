@@ -197,7 +197,7 @@ const doc = new Document({
           spacing: { after: 400 },
           children: [
             new TextRun({
-              text: 'React Native (Expo SDK 55) + Supabase · Bundle ID: dev.inak.linknest',
+              text: 'React Native (Expo SDK 55) + Supabase · Bundle ID: dev.inak.linkle',
               size: 20,
               font: 'Arial',
               color: '666666',

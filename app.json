@@ -2,11 +2,11 @@
   "expo": {
     "name": "Linkle",
     "slug": "linkle-app",
-    "version": "1.0.0",
+    "version": "0.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "scheme": "linkle-app",
+    "scheme": ["linkle-app", "linkle", "link-nest-app"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "dev.inak.linkle",

@@ -16,6 +16,7 @@ const Stack = createNativeStackNavigator<MainStackParamList>();
 /**
  * 블루 글래스 리디자인: 모든 화면이 공기 배경(GlassBackground) 위에
  * 유리 백 버튼을 포함한 커스텀 헤더를 직접 그린다 → 네이티브 헤더 전부 끔.
+ * (폴더 이모지는 route.params.folderEmoji 로 전달되어 각 화면 커스텀 헤더에서 표시)
  */
 export default function MainStack() {
   return (

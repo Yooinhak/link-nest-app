@@ -62,7 +62,7 @@ type SortOrder = 'newest' | 'oldest';
 export default function FolderDetailScreen() {
   const route = useRoute<FolderDetailRouteProp>();
   const navigation = useNavigation<Nav>();
-  const { folderId, folderName } = route.params;
+  const { folderId, folderName, folderEmoji } = route.params;
   const insets = useSafeAreaInsets(); // Android edge-to-edge 하단 대응
   const { showToast } = useToast();
 
@@ -236,9 +236,12 @@ export default function FolderDetailScreen() {
             <ChevronLeftIcon size={17} color={colors.ink} strokeWidth={2.4} />
           </TouchableOpacity>
           <View style={styles.headerTitleWrap}>
-            <Text style={styles.headerTitle} numberOfLines={1}>
-              {folderName || '폴더'}
-            </Text>
+            <View style={styles.headerTitleRow}>
+              {folderEmoji ? <Text style={styles.headerEmoji}>{folderEmoji}</Text> : null}
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {folderName || '폴더'}
+              </Text>
+            </View>
             <Text style={[styles.headerCrumb, !isPersonal && { color: warm.text }]} numberOfLines={1}>
               {crumb}
             </Text>
@@ -471,6 +474,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitleWrap: { flexShrink: 1, gap: 1 },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  headerEmoji: { fontSize: 18 },
   headerTitle: {
     fontSize: 20,
     fontFamily: 'LINESeedKR-Bold',

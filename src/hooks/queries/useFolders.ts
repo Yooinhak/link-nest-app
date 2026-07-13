@@ -47,7 +47,7 @@ export function useCreateFolder(groupId: string | null) {
   const { showToast } = useToast();
 
   return useMutation({
-    mutationFn: async (params: { name: string; color: string }) => {
+    mutationFn: async (params: { name: string; color: string; emoji?: string | null }) => {
       if (!groupId) throw new Error('NO_GROUP');
       const { error } = await supabase.from('folders').insert({ ...params, group_id: groupId });
       if (error) throw error;
@@ -67,9 +67,9 @@ export function useUpdateFolder(groupId: string | null) {
   const { showToast } = useToast();
 
   return useMutation({
-    mutationFn: async (params: { id: number; name: string; color: string }) => {
-      const { id, name, color } = params;
-      const { error } = await supabase.from('folders').update({ name, color }).eq('id', id);
+    mutationFn: async (params: { id: number; name: string; color: string; emoji?: string | null }) => {
+      const { id, name, color, emoji } = params;
+      const { error } = await supabase.from('folders').update({ name, color, emoji }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

@@ -12,6 +12,7 @@ import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import ColorPicker from '../components/ColorPicker';
 import ContextMenu, { ContextMenuItem } from '../components/ContextMenu';
+import EmojiPicker, { pushRecentEmoji } from '../components/EmojiPicker';
 import EmptyState from '../components/EmptyState';
 import GlassBackground from '../components/GlassBackground';
 import GroupRail from '../components/GroupRail';
@@ -42,6 +43,7 @@ type FolderItem = {
   id: number;
   name: string;
   color: string | null;
+  emoji?: string | null;
   posts?: Array<{ count: number }>;
 };
 
@@ -55,8 +57,8 @@ type FolderCardProps = {
   warmTone: boolean;
   /** 2열 그리드 카드 폭 (픽셀 고정 — flex 계산은 numColumns 와 조합 시 폭이 깨지는 사례 있음) */
   width: number;
-  onOpen: (id: number, name: string, color: string | null) => void;
-  onEdit: (id: number, name: string, color: FolderColorKey) => void;
+  onOpen: (id: number, name: string, color: string | null, emoji: string | null) => void;
+  onEdit: (id: number, name: string, color: FolderColorKey, emoji: string | null) => void;
   onDelete: (id: number) => void;
 };
 
@@ -75,7 +77,7 @@ const FolderCard = React.memo(function FolderCard({
     {
       label: '이름 변경',
       icon: <PencilIcon size={16} color={colors.textMuted} />,
-      onPress: () => onEdit(item.id, item.name, (item.color ?? 'blue') as FolderColorKey),
+      onPress: () => onEdit(item.id, item.name, (item.color ?? 'blue') as FolderColorKey, item.emoji ?? null),
     },
     {
       label: '삭제',
@@ -88,13 +90,17 @@ const FolderCard = React.memo(function FolderCard({
   return (
     <TouchableOpacity
       style={[styles.folderCard, { width }, warmTone ? shadows.warmCard : shadows.glassCard]}
-      onPress={() => onOpen(item.id, item.name, item.color)}
+      onPress={() => onOpen(item.id, item.name, item.color, item.emoji ?? null)}
       activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel={`${item.name} 폴더, ${postCount}개의 링크`}
     >
       <View style={[styles.folderTile, { backgroundColor: fc.bg }]}>
-        <FolderIcon size={17} color={fc.icon} />
+        {item.emoji ? (
+          <Text style={styles.folderEmoji}>{item.emoji}</Text>
+        ) : (
+          <FolderIcon size={17} color={fc.icon} />
+        )}
       </View>
       <Text style={styles.folderName} numberOfLines={1}>
         {item.name}
@@ -157,12 +163,19 @@ export default function HomeScreen() {
   const [deleteVisible, setDeleteVisible] = useState(false);
   const [folderName, setFolderName] = useState('');
   const [folderColor, setFolderColor] = useState<FolderColorKey>('blue');
-  const [editTarget, setEditTarget] = useState<{ id: number; name: string; color: FolderColorKey } | null>(null);
+  const [folderEmoji, setFolderEmoji] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<{
+    id: number;
+    name: string;
+    color: FolderColorKey;
+    emoji: string | null;
+  } | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
   const openCreateFolder = useCallback(() => {
     setFolderName('');
     setFolderColor('blue');
+    setFolderEmoji(null);
     setCreateVisible(true);
   }, []);
 
@@ -172,11 +185,13 @@ export default function HomeScreen() {
       return;
     }
     createFolder.mutate(
-      { name: folderName.trim(), color: folderColor },
+      { name: folderName.trim(), color: folderColor, emoji: folderEmoji },
       {
         onSuccess: () => {
+          if (folderEmoji) pushRecentEmoji(folderEmoji);
           setFolderName('');
           setFolderColor('blue');
+          setFolderEmoji(null);
           setCreateVisible(false);
         },
       },
@@ -189,8 +204,13 @@ export default function HomeScreen() {
       return;
     }
     updateFolder.mutate(
-      { id: editTarget.id, name: editTarget.name.trim(), color: editTarget.color },
-      { onSuccess: () => setEditVisible(false) },
+      { id: editTarget.id, name: editTarget.name.trim(), color: editTarget.color, emoji: editTarget.emoji },
+      {
+        onSuccess: () => {
+          if (editTarget.emoji) pushRecentEmoji(editTarget.emoji);
+          setEditVisible(false);
+        },
+      },
     );
   };
 
@@ -207,18 +227,19 @@ export default function HomeScreen() {
   };
 
   const handleOpenFolder = useCallback(
-    (id: number, name: string, color: string | null) => {
+    (id: number, name: string, color: string | null, emoji: string | null) => {
       navigation.navigate('FolderDetail', {
         folderId: String(id),
         folderName: name,
         folderColor: color ?? undefined,
+        folderEmoji: emoji ?? undefined,
       });
     },
     [navigation],
   );
 
-  const handleEditFolder = useCallback((id: number, name: string, color: FolderColorKey) => {
-    setEditTarget({ id, name, color });
+  const handleEditFolder = useCallback((id: number, name: string, color: FolderColorKey, emoji: string | null) => {
+    setEditTarget({ id, name, color, emoji });
     setEditVisible(true);
   }, []);
 
@@ -376,6 +397,7 @@ export default function HomeScreen() {
       <BottomSheet visible={createVisible} onClose={() => setCreateVisible(false)} title="새 폴더" description="링크를 모아볼 폴더를 만들어보세요">
         <Input placeholder="폴더 이름을 입력해주세요" value={folderName} onChangeText={setFolderName} autoFocus />
         <ColorPicker selected={folderColor} onSelect={setFolderColor} label="폴더 색상" />
+        <EmojiPicker value={folderEmoji} onSelect={setFolderEmoji} />
         <View style={styles.sheetBtns}>
           <Button variant="secondary" onPress={() => setCreateVisible(false)} style={{ flex: 1 }}>닫기</Button>
           <Button onPress={handleCreate} loading={createFolder.isPending} style={{ flex: 1.4 }}>만들기</Button>
@@ -386,6 +408,7 @@ export default function HomeScreen() {
       <BottomSheet visible={editVisible} onClose={() => setEditVisible(false)} title="폴더 수정">
         <Input placeholder="새로운 이름" value={editTarget?.name ?? ''} onChangeText={(t) => setEditTarget((p) => (p ? { ...p, name: t } : null))} autoFocus />
         <ColorPicker selected={editTarget?.color ?? 'blue'} onSelect={(c) => setEditTarget((p) => (p ? { ...p, color: c } : null))} label="폴더 색상" />
+        <EmojiPicker value={editTarget?.emoji ?? null} onSelect={(e) => setEditTarget((p) => (p ? { ...p, emoji: e } : null))} />
         <View style={styles.sheetBtns}>
           <Button variant="secondary" onPress={() => setEditVisible(false)} style={{ flex: 1 }}>취소</Button>
           <Button onPress={handleUpdate} loading={updateFolder.isPending} style={{ flex: 1.4 }}>저장</Button>
@@ -472,5 +495,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addTileText: { fontSize: 12, fontFamily: 'LINESeedKR-Bold', color: colors.textMuted },
+  folderEmoji: { fontSize: 18 },
   sheetBtns: { flexDirection: 'row', gap: 10, marginTop: 26, marginBottom: 8 },
 });
