@@ -11,13 +11,20 @@
       "supportsTablet": true,
       "bundleIdentifier": "dev.inak.moaring",
       "appleTeamId": "ARPM23GNDZ",
+      "icon": {
+        "light": "./assets/icon.png",
+        "dark": "./assets/icon-ios-dark.png",
+        "tinted": "./assets/icon-ios-tinted.png"
+      },
       "_usesAppleSignIn_TODO": "Apple Developer 멤버십 가입 후 true로 복원",
       "usesAppleSignIn": false
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#6D5EF0",
-        "foregroundImage": "./assets/adaptive-icon.png"
+        "backgroundImage": "./assets/adaptive-icon-bg.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/adaptive-icon-mono.png"
       },
       "package": "dev.inak.moaring",
       "predictiveBackGestureEnabled": false
@@ -31,7 +38,11 @@
         {
           "image": "./assets/splash-icon.png",
           "imageWidth": 224,
-          "backgroundColor": "#6D5EF0"
+          "backgroundColor": "#6D5EF0",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#241F3D"
+          }
         }
       ],
       "expo-web-browser",
