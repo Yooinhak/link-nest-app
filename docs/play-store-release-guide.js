@@ -157,7 +157,7 @@ const doc = new Document({
               alignment: AlignmentType.RIGHT,
               children: [
                 new TextRun({
-                  text: 'Linkle — Google Play Store 출시 가이드',
+                  text: '모아링 — Google Play Store 출시 가이드',
                   size: 16,
                   font: 'Arial',
                   color: '999999',
@@ -185,7 +185,7 @@ const doc = new Document({
         new Paragraph({
           alignment: AlignmentType.CENTER,
           spacing: { after: 80 },
-          children: [new TextRun({ text: 'Linkle', size: 48, bold: true, font: 'Arial', color: accent })],
+          children: [new TextRun({ text: '모아링', size: 48, bold: true, font: 'Arial', color: accent })],
         }),
         new Paragraph({
           alignment: AlignmentType.CENTER,
@@ -197,7 +197,7 @@ const doc = new Document({
           spacing: { after: 400 },
           children: [
             new TextRun({
-              text: 'React Native (Expo SDK 55) + Supabase · Bundle ID: dev.inak.linkle',
+              text: 'React Native (Expo SDK 55) + Supabase · Bundle ID: dev.inak.moaring',
               size: 20,
               font: 'Arial',
               color: '666666',
@@ -427,7 +427,7 @@ const doc = new Document({
         }),
         p(''),
         step('Play Console → 모든 앱 → 앱 만들기'),
-        sub('앱 이름: Linkle'),
+        sub('앱 이름: 모아링'),
         sub('기본 언어: 한국어'),
         sub('앱 또는 게임: 앱'),
         sub('무료 또는 유료: 무료'),
@@ -448,11 +448,11 @@ const doc = new Document({
             new TableRow({
               children: [
                 makeCell('항목', 2800, { header: true, color: 'FFFFFF', bold: true }),
-                makeCell('Linkle 기준 값', 6560, { header: true, color: 'FFFFFF', bold: true }),
+                makeCell('모아링 기준 값', 6560, { header: true, color: 'FFFFFF', bold: true }),
               ],
             }),
             ...[
-              ['앱 이름', 'Linkle'],
+              ['앱 이름', '모아링'],
               ['짧은 설명 (80자)', '발견한 링크를 폴더별로 저장하고 미리보기와 함께 관리하세요'],
               ['긴 설명 (4000자)', '자유롭게 작성 (주요 기능, 차별점 설명)'],
               ['카테고리', '도구 > 생산성'],
@@ -478,7 +478,7 @@ const doc = new Document({
 
         p(''),
         h2('6-3. 데이터 보안 섹션 (Data Safety)'),
-        p('Google Play의 필수 항목입니다. Linkle 기준으로:'),
+        p('Google Play의 필수 항목입니다. 모아링 기준으로:'),
         p(''),
         new Table({
           width: { size: 9360, type: WidthType.DXA },
@@ -508,7 +508,7 @@ const doc = new Document({
         // Step 6-4
         p(''),
         h2('6-4. 콘텐츠 등급'),
-        bullet([normal('모든 사람 (Everyone) — Linkle는 북마크 관리 앱이므로 적합')]),
+        bullet([normal('모든 사람 (Everyone) — 모아링는 북마크 관리 앱이므로 적합')]),
         bullet([normal('IARC 설문지를 작성하면 자동으로 등급이 부여됩니다')]),
 
         // Step 7
@@ -597,6 +597,6 @@ const doc = new Document({
 });
 
 Packer.toBuffer(doc).then((buffer) => {
-  fs.writeFileSync('/sessions/clever-determined-euler/mnt/linkle-app/docs/play-store-release-guide.docx', buffer);
+  fs.writeFileSync('/sessions/clever-determined-euler/mnt/moaring-app/docs/play-store-release-guide.docx', buffer);
   console.log('DONE: play-store-release-guide.docx');
 });

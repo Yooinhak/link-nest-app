@@ -25,7 +25,7 @@ import { useToast } from '../Toast';
  *  - 플로팅 탭바 ＋: initialUrl 없음 → URL 입력 필드 노출
  */
 
-const RECENT_FOLDER_KEY = 'linkle.recentFolderId';
+const RECENT_FOLDER_KEY = 'moaring.recentFolderId';
 
 interface SaveLinkSheetProps {
   visible: boolean;

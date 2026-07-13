@@ -37,7 +37,7 @@ const H = 812;
 
 /** variant 별 라디얼 오브 정의 — 시안의 radial-gradient 위치/색 근사 */
 const ORBS: Record<AirVariant, { cx: number; cy: number; r: number; color: string; opacity: number }[]> = {
-  // v3 (Linkle 2a 파이널): 블루 오브 → 라벤더 오브
+  // v3 (Moaring 2a 파이널): 블루 오브 → 라벤더 오브
   personal: [
     { cx: 80, cy: 50, r: 150, color: '#9B8CFF', opacity: 0.5 },
     { cx: 340, cy: 60, r: 125, color: '#8B6EFF', opacity: 0.28 },

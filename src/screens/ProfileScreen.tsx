@@ -214,7 +214,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.footerText}>Linkle v2.0.0</Text>
+        <Text style={styles.footerText}>모아링 v0.0.1</Text>
       </ScrollView>
 
       <AlertDialog

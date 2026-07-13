@@ -13,7 +13,7 @@ import { useAuth } from '../hooks/useAuth';
  * - 선택된 그룹이 사라졌으면(나가기/삭제/강퇴) 개인 그룹으로 폴백.
  */
 
-const STORAGE_KEY = 'linkle.currentGroupId';
+const STORAGE_KEY = 'moaring.currentGroupId';
 
 interface GroupContextValue {
   groups: GroupSummary[];

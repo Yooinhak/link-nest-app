@@ -1,6 +1,6 @@
 /**
- * Design Tokens — Linkle "인디고 글래스" (DESIGN UPDATE v3, 2026-07-11)
- * 기준: design_handoff/README.md + 'Linkle 2a 파이널.dc.html'
+ * Design Tokens — 모아링(Moaring) "인디고 글래스" (DESIGN UPDATE v3, 2026-07-11)
+ * 기준: design_handoff/README.md + 'Linkle 2a 파이널.dc.html' (구 명칭 시안 파일)
  *
  * 핵심 규칙:
  *  ◆ 배경 = 공기: 개인(나의 서랍) = 라벤더, 공유 그룹 = 웜 (GlassBackground)

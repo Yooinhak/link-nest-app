@@ -225,11 +225,11 @@ export default function LoginScreen() {
       <View style={styles.topSection}>
         {/* 유리 받침 위 로고 타일 */}
         <View style={styles.logoGlass}>
-          <View style={styles.logoTile} accessibilityLabel="Linkle 로고">
+          <View style={styles.logoTile} accessibilityLabel="모아링 로고">
             <Image source={logoIcon} style={styles.logoImage} resizeMode="cover" />
           </View>
         </View>
-        <Text style={styles.title}>Linkle</Text>
+        <Text style={styles.title}>모아링</Text>
         <Text style={styles.subtitle}>{'흩어진 링크를 한 곳에,\n친구와 함께 반짝이게'}</Text>
       </View>
 

@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "Linkle",
-    "slug": "linkle-app",
+    "name": "모아링",
+    "slug": "moaring-app",
     "version": "0.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "scheme": ["linkle-app", "linkle", "link-nest-app"],
+    "scheme": ["moaring"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "dev.inak.linkle",
+      "bundleIdentifier": "dev.inak.moaring",
       "appleTeamId": "ARPM23GNDZ",
       "_usesAppleSignIn_TODO": "Apple Developer 멤버십 가입 후 true로 복원",
       "usesAppleSignIn": false
@@ -19,7 +19,7 @@
         "backgroundColor": "#6D5EF0",
         "foregroundImage": "./assets/adaptive-icon.png"
       },
-      "package": "dev.inak.linkle",
+      "package": "dev.inak.moaring",
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -38,8 +38,8 @@
       [
         "@sentry/react-native/expo",
         {
-          "organization": "linkle",
-          "project": "linkle-app"
+          "organization": "moaring",
+          "project": "moaring-app"
         }
       ]
     ],

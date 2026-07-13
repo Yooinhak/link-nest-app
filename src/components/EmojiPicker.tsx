@@ -16,7 +16,7 @@ import { CheckIcon, SearchIcon, XIcon } from './icons';
  * - 이모지는 선택 사항이므로 value=null 을 허용한다.
  */
 
-const RECENT_EMOJI_KEY = 'linknest.recentEmojis';
+const RECENT_EMOJI_KEY = 'moaring.recentEmojis';
 const MAX_RECENT = 8;
 
 /** 추천 이모지 — [이모지, 한글/영문 검색 키워드]. 폴더/링크 정리 맥락에 맞춘 큐레이션. */
