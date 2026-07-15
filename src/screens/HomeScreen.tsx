@@ -393,26 +393,41 @@ export default function HomeScreen() {
       {/* ── 공유 인텐트 → 저장 위치 선택 (시안 09) ── */}
       <SaveLinkSheet visible={!!pendingUrl} onClose={clearPendingUrl} initialUrl={pendingUrl} />
 
-      {/* ── 폴더 생성 ── */}
-      <BottomSheet visible={createVisible} onClose={() => setCreateVisible(false)} title="새 폴더" description="링크를 모아볼 폴더를 만들어보세요">
-        <Input placeholder="폴더 이름을 입력해주세요" value={folderName} onChangeText={setFolderName} autoFocus />
+      {/* ── 폴더 생성 — 이름 입력은 상단 고정, 버튼은 하단 고정 (색상/이모지만 스크롤) ── */}
+      <BottomSheet
+        visible={createVisible}
+        onClose={() => setCreateVisible(false)}
+        title="새 폴더"
+        description="링크를 모아볼 폴더를 만들어보세요"
+        fixedTop={<Input placeholder="폴더 이름을 입력해주세요" value={folderName} onChangeText={setFolderName} autoFocus />}
+        footer={
+          <View style={styles.sheetBtns}>
+            <Button variant="secondary" onPress={() => setCreateVisible(false)} style={{ flex: 1 }}>닫기</Button>
+            <Button onPress={handleCreate} loading={createFolder.isPending} style={{ flex: 1.4 }}>만들기</Button>
+          </View>
+        }
+      >
         <ColorPicker selected={folderColor} onSelect={setFolderColor} label="폴더 색상" />
         <EmojiPicker value={folderEmoji} onSelect={setFolderEmoji} />
-        <View style={styles.sheetBtns}>
-          <Button variant="secondary" onPress={() => setCreateVisible(false)} style={{ flex: 1 }}>닫기</Button>
-          <Button onPress={handleCreate} loading={createFolder.isPending} style={{ flex: 1.4 }}>만들기</Button>
-        </View>
       </BottomSheet>
 
       {/* ── 폴더 수정 ── */}
-      <BottomSheet visible={editVisible} onClose={() => setEditVisible(false)} title="폴더 수정">
-        <Input placeholder="새로운 이름" value={editTarget?.name ?? ''} onChangeText={(t) => setEditTarget((p) => (p ? { ...p, name: t } : null))} autoFocus />
+      <BottomSheet
+        visible={editVisible}
+        onClose={() => setEditVisible(false)}
+        title="폴더 수정"
+        fixedTop={
+          <Input placeholder="새로운 이름" value={editTarget?.name ?? ''} onChangeText={(t) => setEditTarget((p) => (p ? { ...p, name: t } : null))} autoFocus />
+        }
+        footer={
+          <View style={styles.sheetBtns}>
+            <Button variant="secondary" onPress={() => setEditVisible(false)} style={{ flex: 1 }}>취소</Button>
+            <Button onPress={handleUpdate} loading={updateFolder.isPending} style={{ flex: 1.4 }}>저장</Button>
+          </View>
+        }
+      >
         <ColorPicker selected={editTarget?.color ?? 'blue'} onSelect={(c) => setEditTarget((p) => (p ? { ...p, color: c } : null))} label="폴더 색상" />
         <EmojiPicker value={editTarget?.emoji ?? null} onSelect={(e) => setEditTarget((p) => (p ? { ...p, emoji: e } : null))} />
-        <View style={styles.sheetBtns}>
-          <Button variant="secondary" onPress={() => setEditVisible(false)} style={{ flex: 1 }}>취소</Button>
-          <Button onPress={handleUpdate} loading={updateFolder.isPending} style={{ flex: 1.4 }}>저장</Button>
-        </View>
       </BottomSheet>
 
       <AlertDialog visible={deleteVisible} onClose={() => setDeleteVisible(false)} title="폴더를 삭제할까요?" description="폴더 안의 모든 링크도 함께 삭제돼요" confirmText="삭제" onConfirm={handleDelete} destructive />
@@ -496,5 +511,5 @@ const styles = StyleSheet.create({
   },
   addTileText: { fontSize: 12, fontFamily: 'LINESeedKR-Bold', color: colors.textMuted },
   folderEmoji: { fontSize: 18 },
-  sheetBtns: { flexDirection: 'row', gap: 10, marginTop: 26, marginBottom: 8 },
+  sheetBtns: { flexDirection: 'row', gap: 10 }, // footer 고정 영역이 패딩을 담당
 });

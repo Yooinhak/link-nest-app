@@ -113,9 +113,11 @@ export default function EmojiPicker({ value, onSelect, label = '이모지 (선�
       .catch(() => {});
   }, []);
 
+  // 추천은 2줄(14개)만 노출 — 나머지는 검색으로 (시트가 길어지는 것 방지, 2026-07-13 피드백)
+  const RECOMMEND_COUNT = 14;
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return EMOJI_DATA;
+    if (!q) return EMOJI_DATA.slice(0, RECOMMEND_COUNT);
     return EMOJI_DATA.filter(([emoji, kw]) => emoji === q || kw.toLowerCase().includes(q));
   }, [query]);
 

@@ -120,25 +120,38 @@ export default function SaveLinkSheet({ visible, onClose, initialUrl = null }: S
   const hasFolders = sections.some((s) => s.folders.length > 0);
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title="어디에 저장할까요?">
-      {/* 직접 입력 모드: URL 필드 / 공유 모드: 받은 링크 표시 */}
-      {initialUrl ? (
-        <Text style={styles.sharedUrl} numberOfLines={1}>
-          🔗 {initialUrl}
-        </Text>
-      ) : (
-        <View style={styles.urlField}>
-          <Input
-            placeholder="https:// 링크를 붙여넣어주세요"
-            value={url}
-            onChangeText={setUrl}
-            autoCapitalize="none"
-            keyboardType="url"
-            autoFocus
-          />
-        </View>
-      )}
-
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title="어디에 저장할까요?"
+      // URL 은 상단 고정 — 폴더 목록을 스크롤해도 항상 보인다
+      fixedTop={
+        initialUrl ? (
+          <Text style={styles.sharedUrl} numberOfLines={1}>
+            🔗 {initialUrl}
+          </Text>
+        ) : (
+          <View style={styles.urlField}>
+            <Input
+              placeholder="https:// 링크를 붙여넣어주세요"
+              value={url}
+              onChangeText={setUrl}
+              autoCapitalize="none"
+              keyboardType="url"
+              autoFocus
+            />
+          </View>
+        )
+      }
+      // 저장 버튼은 하단 고정
+      footer={
+        hasFolders ? (
+          <Button onPress={handleSave} loading={createPost.isPending} disabled={!canSave}>
+            여기에 저장
+          </Button>
+        ) : undefined
+      }
+    >
       {hasFolders ? (
         <>
           {recentFolder && (
@@ -182,14 +195,6 @@ export default function SaveLinkSheet({ visible, onClose, initialUrl = null }: S
             </View>
           ))}
 
-          <Button
-            onPress={handleSave}
-            loading={createPost.isPending}
-            disabled={!canSave}
-            style={styles.saveBtn}
-          >
-            여기에 저장
-          </Button>
         </>
       ) : (
         <Text style={styles.emptyText}>아직 폴더가 없어요. 홈에서 먼저 폴더를 만들어주세요.</Text>
@@ -338,10 +343,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'LINESeedKR',
     color: colors.textDisabled,
-  },
-  saveBtn: {
-    marginTop: 18,
-    marginBottom: 4,
   },
   emptyText: {
     fontSize: 14,
