@@ -7,6 +7,6 @@
  * TODO(G-7): 정적 호스팅 배포 후 URL 교체
  */
 export const EXTERNAL_URLS = {
-  PRIVACY_POLICY: 'https://moaring.app/privacy-policy',
-  TERMS_OF_SERVICE: 'https://moaring.app/terms-of-service',
+  PRIVACY_POLICY: 'https://moaring.inak.dev/privacy-policy',
+  TERMS_OF_SERVICE: 'https://moaring.inak.dev/terms-of-service',
 } as const;

@@ -5,6 +5,7 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 import { BottomSheetTextInput, useBottomSheetInternal } from '@gorhom/bottom-sheet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { EMOJI_DATA } from '../constants/emojiData';
 import { colors } from '../constants/theme';
 import { lightTap } from '../utils/haptics';
 
@@ -14,69 +15,11 @@ import { CheckIcon, SearchIcon, XIcon } from './icons';
  * 폴더/그룹 공용 이모지 피커 — 의존성 없는 인앱 큐레이션 그리드.
  * - 최근 사용(AsyncStorage) + 추천 그리드 + 한글 검색 + "이모지 없음" + 직접 입력 fallback.
  * - 이모지는 선택 사항이므로 value=null 을 허용한다.
+ * - EMOJI_DATA 는 constants/emojiData.ts 로 추출(자동추천 로직과 공유, 2026-07-15).
  */
 
 const RECENT_EMOJI_KEY = 'moaring.recentEmojis';
 const MAX_RECENT = 8;
-
-/** 추천 이모지 — [이모지, 한글/영문 검색 키워드]. 폴더/링크 정리 맥락에 맞춘 큐레이션. */
-const EMOJI_DATA: Array<[string, string]> = [
-  // 자주 쓰는 정리/일반
-  ['📁', '폴더 folder 파일'],
-  ['📌', '핀 고정 중요 pin'],
-  ['⭐', '별 즐겨찾기 중요 star favorite'],
-  ['❤️', '하트 좋아요 사랑 heart love'],
-  ['🔥', '불 인기 핫 fire hot'],
-  ['✨', '반짝 새로움 sparkle new'],
-  ['💡', '아이디어 전구 idea light'],
-  ['✅', '체크 완료 done check'],
-  ['🎯', '목표 타겟 goal target'],
-  ['🚀', '로켓 시작 런칭 rocket launch'],
-  // 일/공부
-  ['💼', '일 업무 회사 work business'],
-  ['📚', '책 공부 학습 book study'],
-  ['📖', '독서 책 read book'],
-  ['✏️', '연필 메모 쓰기 write pencil'],
-  ['📝', '메모 노트 문서 note memo'],
-  ['💻', '노트북 개발 컴퓨터 laptop code'],
-  ['🖥️', '컴퓨터 데스크탑 desktop pc'],
-  ['📊', '차트 그래프 분석 chart graph'],
-  ['📈', '상승 성장 그래프 growth chart'],
-  ['💰', '돈 재테크 money finance'],
-  ['🧠', '두뇌 지식 아이디어 brain'],
-  // 취미/생활
-  ['🎬', '영화 비디오 movie film'],
-  ['🎵', '음악 노래 music song'],
-  ['🎮', '게임 game'],
-  ['📷', '카메라 사진 camera photo'],
-  ['🎨', '그림 디자인 예술 art design'],
-  ['✈️', '비행기 여행 travel plane'],
-  ['🗺️', '지도 여행 장소 map travel'],
-  ['🏠', '집 홈 home house'],
-  ['🍔', '음식 맛집 food burger'],
-  ['🍜', '음식 라면 국수 food noodle'],
-  ['☕', '커피 카페 coffee cafe'],
-  ['🛒', '쇼핑 장바구니 shopping cart'],
-  ['👕', '옷 패션 의류 fashion clothes'],
-  ['🏃', '운동 달리기 헬스 exercise run'],
-  ['🐶', '강아지 반려동물 dog pet'],
-  ['🐱', '고양이 반려동물 cat pet'],
-  ['🌱', '식물 새싹 성장 plant grow'],
-  ['🎁', '선물 이벤트 gift present'],
-  // 상태/분류
-  ['🔖', '북마크 태그 bookmark tag'],
-  ['🗂️', '분류 정리 서류 organize file'],
-  ['📎', '클립 첨부 clip attach'],
-  ['🔗', '링크 연결 link'],
-  ['📥', '보관 받은 inbox save'],
-  ['🕐', '나중에 시간 later time'],
-  ['❓', '질문 궁금 question'],
-  ['⚡', '빠름 번개 즐겨 fast bolt'],
-  ['🌟', '반짝 하이라이트 star glow'],
-  ['🎉', '축하 파티 celebrate party'],
-  ['🌈', '무지개 다양 rainbow'],
-  ['💎', '보석 소중 프리미엄 gem premium'],
-];
 
 interface EmojiPickerProps {
   /** 현재 선택된 이모지 (없으면 null). */
@@ -84,6 +27,8 @@ interface EmojiPickerProps {
   /** 선택/해제 콜백. 해제 시 null. */
   onSelect: (emoji: string | null) => void;
   label?: string;
+  /** 제공 시 라벨 우측에 "완료" 버튼을 그려 피커를 닫는다(접이식 사용 시). */
+  onClose?: () => void;
 }
 
 /** 최근 사용 이모지 앞에 추가 (중복 제거, 최대 MAX_RECENT). */
@@ -98,7 +43,7 @@ export async function pushRecentEmoji(emoji: string) {
   }
 }
 
-export default function EmojiPicker({ value, onSelect, label = '이모지 (선택)' }: EmojiPickerProps) {
+export default function EmojiPicker({ value, onSelect, label = '이모지 (선택)', onClose }: EmojiPickerProps) {
   const isInSheet = useBottomSheetInternal(true) != null;
   const InputComponent = isInSheet ? BottomSheetTextInput : TextInput;
 
@@ -143,21 +88,37 @@ export default function EmojiPicker({ value, onSelect, label = '이모지 (선�
     <View style={styles.container}>
       <View style={styles.labelRow}>
         <Text style={styles.label}>{label}</Text>
-        {value ? (
-          <TouchableOpacity
-            style={styles.clearBtn}
-            onPress={() => {
-              lightTap();
-              onSelect(null);
-            }}
-            activeOpacity={0.6}
-            accessibilityRole="button"
-            accessibilityLabel="이모지 없음"
-          >
-            <XIcon size={12} color={colors.textMuted} strokeWidth={2.5} />
-            <Text style={styles.clearText}>이모지 없음</Text>
-          </TouchableOpacity>
-        ) : null}
+        <View style={styles.labelActions}>
+          {value ? (
+            <TouchableOpacity
+              style={styles.clearBtn}
+              onPress={() => {
+                lightTap();
+                onSelect(null);
+              }}
+              activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel="이모지 없음"
+            >
+              <XIcon size={12} color={colors.textMuted} strokeWidth={2.5} />
+              <Text style={styles.clearText}>이모지 없음</Text>
+            </TouchableOpacity>
+          ) : null}
+          {onClose ? (
+            <TouchableOpacity
+              style={styles.doneBtn}
+              onPress={() => {
+                lightTap();
+                onClose();
+              }}
+              activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel="이모지 선택 완료"
+            >
+              <Text style={styles.doneText}>완료</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
 
       {/* 검색 + 직접 입력 */}
@@ -246,9 +207,12 @@ function EmojiCell({ emoji, selected, onPress }: { emoji: string; selected: bool
 const styles = StyleSheet.create({
   container: { marginTop: 20, gap: 10 },
   labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  labelActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   label: { fontSize: 13, fontFamily: 'LINESeedKR-Bold', color: colors.textMuted },
   clearBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 2, paddingHorizontal: 6 },
   clearText: { fontSize: 12, fontFamily: 'LINESeedKR-Bold', color: colors.textMuted },
+  doneBtn: { paddingVertical: 2, paddingHorizontal: 8 },
+  doneText: { fontSize: 13, fontFamily: 'LINESeedKR-Bold', color: colors.primaryDeep },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -31,14 +31,14 @@ import { colors, radius, shadows } from '../constants/theme';
  * 레이어링: 인라인 시트를 RN Modal 로 감싼다 — 탭바/시스템 바 위층 확보.
  * Modal 내부 제스처는 GestureHandlerRootView 래핑 필수.
  *
- * 키보드 (2026-07-13 v2 — "앵커드" 방식):
- * - 시트를 키보드 위로 들어올리지 않는다. interactive 리프트 + 높이 축소를 겹치면
- *   시트가 키보드 위 공간 전체를 채워 화면 꼭대기까지 닿는 문제가 있었다 (실기기).
- * - 대신 시트는 제자리에 고정, 키보드가 하단을 덮는다 — 핵심 입력은 fixedTop 에
- *   있으므로 항상 보인다 (토스식).
- * - 스크롤 영역엔 키보드 높이만큼 하단 패딩을 더해, 스크롤 중간의 입력(이모지 검색
- *   등)도 스크롤로 키보드 위에 노출 가능. iOS 는 automaticallyAdjustKeyboardInsets 로
- *   포커스된 입력을 자동 스크롤.
+ * 키보드 (2026-07-15 v3 — "리프트" 방식, 풀스크린 부작용 해결):
+ * - 키보드가 뜨면 시트 전체를 키보드 높이만큼 위로 띄운다(bottomInset=keyboardHeight).
+ *   폴더 목록·저장 버튼(footer)이 키보드에 가리지 않고 그 위로 올라온다.
+ * - v2 의 앵커드 방식은 키보드가 하단(저장 버튼 등)을 덮는 문제가 있었고, 그 이전
+ *   interactive 리프트는 시트가 화면 꼭대기까지 차오르는 풀스크린 부작용이 있었다.
+ *   원인은 리프트 시 시트 높이를 키보드만큼 줄이지 않은 것 — 이제 snapPoints 에서
+ *   (화면 - 상단인셋 - 키보드) 안으로 높이를 클램프하므로 부작용이 없다.
+ * - 시트가 통째로 키보드 위에 있으므로 스크롤 하단 패딩/자동 인셋은 불필요(제거).
  *
  * 고정 헤더/푸터 (2026-07-13, UX 개선):
  * - 타이틀·`fixedTop`(핵심 입력)·`footer`(CTA 버튼)는 스크롤 밖에 고정되고,
@@ -124,8 +124,13 @@ export default function BottomSheet({
       contentHeight > 0
         ? topHeight + contentHeight + scrollPad + footerHeight + CHROME_HEIGHT
         : SCREEN_HEIGHT * 0.45;
-    return [Math.min(Math.max(measured, 160), MAX_HEIGHT)];
-  }, [topHeight, contentHeight, footerHeight, bottomPadding, hasFooter]);
+    // 키보드가 떠 있으면 시트를 그만큼 위로 올리므로(bottomInset), 시트 높이도
+    // (화면 - 상단 인셋 - 키보드) 안으로 제한해야 한다. 이 클램프가 없으면 시트
+    // 상단이 화면 밖으로 밀려나 풀스크린처럼 보이던 예전 버그가 재발한다.
+    const availWithKeyboard = SCREEN_HEIGHT - insets.top - keyboardHeight - 12;
+    const cap = keyboardHeight > 0 ? Math.min(MAX_HEIGHT, availWithKeyboard) : MAX_HEIGHT;
+    return [Math.min(Math.max(measured, 160), cap)];
+  }, [topHeight, contentHeight, footerHeight, bottomPadding, hasFooter, keyboardHeight, insets.top]);
 
   const onTopLayout = useCallback((e: LayoutChangeEvent) => {
     setTopHeight(e.nativeEvent.layout.height);
@@ -178,8 +183,12 @@ export default function BottomSheet({
           enableDynamicSizing={false}
           enablePanDownToClose
           onClose={handleClose}
-          // "extend" = 단일 snapPoint 에선 시트가 키보드에 반응해 움직이지 않음 (앵커드).
-          // interactive(리프트)는 시트를 화면 꼭대기까지 밀어올려 폐기 (2026-07-13 실기기).
+          // 시트 전체를 키보드 높이만큼 위로 띄운다 — 폴더 목록·저장 버튼(footer)이
+          // 키보드에 가리지 않고 그 위로 올라온다. 높이는 snapPoints 에서 이미
+          // (화면-키보드) 안으로 클램프하므로 예전 interactive 방식의 풀스크린
+          // 부작용이 없다 (2026-07-15).
+          bottomInset={keyboardHeight}
+          // 단일 snapPoint 라 "extend" 는 실질적 no-op — 리프트는 bottomInset 담당.
           keyboardBehavior="extend"
           keyboardBlurBehavior="restore"
           backdropComponent={renderBackdrop}
@@ -210,13 +219,10 @@ export default function BottomSheet({
                 styles.content,
                 // 푸터가 없으면 스크롤 끝에 하단 패딩을 직접 준다
                 !footer && { paddingBottom: bottomPadding },
-                // Android: 키보드가 시트 하단을 덮는 동안 가려진 만큼 스크롤 여백 확보
-                // (iOS 는 automaticallyAdjustKeyboardInsets 가 담당 — 중복 방지)
-                Platform.OS === 'android' &&
-                  keyboardHeight > 0 && { paddingBottom: keyboardHeight + 24 },
               ]}
-              // iOS: 포커스된 입력을 키보드 위로 자동 스크롤
-              automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+              // 시트 전체가 bottomInset 으로 키보드 위에 떠 있으므로, 스크롤 자체를
+              // 키보드에 맞춰 추가로 밀어올릴 필요가 없다 (이중 여백 방지).
+              automaticallyAdjustKeyboardInsets={false}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
@@ -226,7 +232,12 @@ export default function BottomSheet({
             {/* ── 고정 푸터: CTA 버튼 ── */}
             {footer && (
               <View
-                style={[styles.footerArea, { paddingBottom: bottomPadding }]}
+                style={[
+                  styles.footerArea,
+                  // 키보드가 뜨면 시트가 키보드 위로 떠서 하단 세이프에어리어가
+                  // 불필요 — 여백을 줄여 버튼을 키보드 바로 위에 붙인다.
+                  { paddingBottom: keyboardHeight > 0 ? 12 : bottomPadding },
+                ]}
                 onLayout={onFooterLayout}
               >
                 {footer}
