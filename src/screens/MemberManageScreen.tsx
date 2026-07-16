@@ -15,7 +15,7 @@ import Input from '../components/Input';
 import MemberRow from '../components/MemberRow';
 import InviteSheet from '../components/sheets/InviteSheet';
 import { useToast } from '../components/Toast';
-import { colors, glass, shadows, typo, warm } from '../constants/theme';
+import { colors, getGroupColor, glass, shadows, typo, warm } from '../constants/theme';
 import { useGroup } from '../contexts/GroupContext';
 import {
   useActiveInviteQuery,
@@ -135,7 +135,7 @@ export default function MemberManageScreen() {
       >
         {/* 그룹 카드 */}
         <View style={styles.groupCard}>
-          <View style={styles.groupTile}>
+          <View style={[styles.groupTile, group && { backgroundColor: getGroupColor(group.id).bg }]}>
             <Text style={styles.groupEmoji}>{group?.emoji ?? '📁'}</Text>
           </View>
           <View style={styles.groupInfo}>

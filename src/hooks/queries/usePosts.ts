@@ -29,6 +29,7 @@ export function useCreatePost() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: [queryKeys.POST_LIST, String(variables.folder_id)] });
       queryClient.invalidateQueries({ queryKey: [queryKeys.FOLDER_LIST] });
+      queryClient.invalidateQueries({ queryKey: [queryKeys.GROUP_ACTIVITY] });
       showToast('success', '링크가 추가되었어요');
     },
     onError: () => {

@@ -129,6 +129,17 @@ export function getFolderColor(key?: string | null) {
   return folderColors.find((c) => c.key === key) ?? folderColors[0];
 }
 
+/**
+ * 그룹 id → 안정적인 팔레트 색. 그룹은 색 속성이 없어 레일/타일에서 이모지에만
+ * 의존해 구분됐는데(모델 비대칭), id 해시로 일관된 색을 부여해 식별성을 높인다.
+ * (스키마 변경 없이 클라이언트에서 결정적으로 계산)
+ */
+export function getGroupColor(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return folderColors[h % folderColors.length];
+}
+
 /** Border radius 스케일 — 블루 글래스: 카드 20, 버튼 16, 칩(레일) 21 */
 export const radius = {
   card: 20,
