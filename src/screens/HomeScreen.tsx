@@ -10,10 +10,11 @@ import AlertDialog from '../components/AlertDialog';
 import AvatarStack from '../components/AvatarStack';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
-import ColorPicker from '../components/ColorPicker';
 import ContextMenu, { ContextMenuItem } from '../components/ContextMenu';
-import EmojiPicker, { pushRecentEmoji } from '../components/EmojiPicker';
+import { pushRecentEmoji } from '../components/EmojiPicker';
 import EmptyState from '../components/EmptyState';
+import FolderIdentityPicker from '../components/FolderIdentityPicker';
+import FolderTilePreview from '../components/FolderTilePreview';
 import GlassBackground from '../components/GlassBackground';
 import GroupRail from '../components/GroupRail';
 import { FolderIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/icons';
@@ -23,6 +24,7 @@ import InviteAcceptSheet from '../components/sheets/InviteAcceptSheet';
 import InviteSheet from '../components/sheets/InviteSheet';
 import SaveLinkSheet from '../components/sheets/SaveLinkSheet';
 import { useToast } from '../components/Toast';
+import { suggestIdentity } from '../constants/emojiData';
 import { colors, FolderColorKey, getFolderColor, glass, shadows, typo, warm } from '../constants/theme';
 import { useGroup } from '../contexts/GroupContext';
 import {
@@ -171,13 +173,33 @@ export default function HomeScreen() {
     emoji: string | null;
   } | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+  // 이모지 검색 그리드 열림/닫힘 (기본 닫힘 — 미리보기 타일/더보기 탭으로 열림)
+  const [createEmojiOpen, setCreateEmojiOpen] = useState(false);
+  const [editEmojiOpen, setEditEmojiOpen] = useState(false);
+  // 생성 시 이름→이모지·색 자동추천. 사용자가 수동으로 바꾸면 true 가 되어 추천 중단.
+  const [identityTouched, setIdentityTouched] = useState(false);
 
   const openCreateFolder = useCallback(() => {
     setFolderName('');
     setFolderColor('blue');
     setFolderEmoji(null);
+    setCreateEmojiOpen(false);
+    setIdentityTouched(false);
     setCreateVisible(true);
   }, []);
+
+  // 이름을 칠 때마다(사용자가 아직 손대지 않았으면) 어울리는 이모지+색을 자동 채움.
+  const handleCreateNameChange = useCallback(
+    (text: string) => {
+      setFolderName(text);
+      if (!identityTouched) {
+        const s = suggestIdentity(text);
+        setFolderColor(s.color);
+        setFolderEmoji(s.emoji);
+      }
+    },
+    [identityTouched],
+  );
 
   const handleCreate = () => {
     if (!folderName.trim()) {
@@ -240,6 +262,7 @@ export default function HomeScreen() {
 
   const handleEditFolder = useCallback((id: number, name: string, color: FolderColorKey, emoji: string | null) => {
     setEditTarget({ id, name, color, emoji });
+    setEditEmojiOpen(false);
     setEditVisible(true);
   }, []);
 
@@ -403,7 +426,19 @@ export default function HomeScreen() {
         onClose={() => setCreateVisible(false)}
         title="새 폴더"
         description="링크를 모아볼 폴더를 만들어보세요"
-        fixedTop={<Input placeholder="폴더 이름을 입력해주세요" value={folderName} onChangeText={setFolderName} autoFocus />}
+        fixedTop={
+          <View style={styles.sheetTopRow}>
+            <FolderTilePreview
+              color={folderColor}
+              emoji={folderEmoji}
+              active={createEmojiOpen}
+              onPress={() => setCreateEmojiOpen((o) => !o)}
+            />
+            <View style={styles.sheetTopInput}>
+              <Input placeholder="폴더 이름을 입력해주세요" value={folderName} onChangeText={handleCreateNameChange} autoFocus />
+            </View>
+          </View>
+        }
         footer={
           <View style={styles.sheetBtns}>
             <Button variant="secondary" onPress={() => setCreateVisible(false)} style={{ flex: 1 }}>닫기</Button>
@@ -411,8 +446,18 @@ export default function HomeScreen() {
           </View>
         }
       >
-        <ColorPicker selected={folderColor} onSelect={setFolderColor} label="폴더 색상" />
-        <EmojiPicker value={folderEmoji} onSelect={setFolderEmoji} />
+        <FolderIdentityPicker
+          name={folderName}
+          color={folderColor}
+          emoji={folderEmoji}
+          onChange={({ color, emoji }) => {
+            setFolderColor(color);
+            setFolderEmoji(emoji);
+          }}
+          onManualChange={() => setIdentityTouched(true)}
+          searchOpen={createEmojiOpen}
+          onSearchOpenChange={setCreateEmojiOpen}
+        />
       </BottomSheet>
 
       {/* ── 폴더 수정 ── */}
@@ -421,7 +466,17 @@ export default function HomeScreen() {
         onClose={() => setEditVisible(false)}
         title="폴더 수정"
         fixedTop={
-          <Input placeholder="새로운 이름" value={editTarget?.name ?? ''} onChangeText={(t) => setEditTarget((p) => (p ? { ...p, name: t } : null))} autoFocus />
+          <View style={styles.sheetTopRow}>
+            <FolderTilePreview
+              color={editTarget?.color ?? 'blue'}
+              emoji={editTarget?.emoji ?? null}
+              active={editEmojiOpen}
+              onPress={() => setEditEmojiOpen((o) => !o)}
+            />
+            <View style={styles.sheetTopInput}>
+              <Input placeholder="새로운 이름" value={editTarget?.name ?? ''} onChangeText={(t) => setEditTarget((p) => (p ? { ...p, name: t } : null))} autoFocus />
+            </View>
+          </View>
         }
         footer={
           <View style={styles.sheetBtns}>
@@ -430,8 +485,14 @@ export default function HomeScreen() {
           </View>
         }
       >
-        <ColorPicker selected={editTarget?.color ?? 'blue'} onSelect={(c) => setEditTarget((p) => (p ? { ...p, color: c } : null))} label="폴더 색상" />
-        <EmojiPicker value={editTarget?.emoji ?? null} onSelect={(e) => setEditTarget((p) => (p ? { ...p, emoji: e } : null))} />
+        <FolderIdentityPicker
+          name={editTarget?.name ?? ''}
+          color={editTarget?.color ?? 'blue'}
+          emoji={editTarget?.emoji ?? null}
+          onChange={({ color, emoji }) => setEditTarget((p) => (p ? { ...p, color, emoji } : null))}
+          searchOpen={editEmojiOpen}
+          onSearchOpenChange={setEditEmojiOpen}
+        />
       </BottomSheet>
 
       <AlertDialog visible={deleteVisible} onClose={() => setDeleteVisible(false)} title="폴더를 삭제할까요?" description="폴더 안의 모든 링크도 함께 삭제돼요" confirmText="삭제" onConfirm={handleDelete} destructive />
@@ -522,4 +583,6 @@ const styles = StyleSheet.create({
   addTileText: { fontSize: 12, fontFamily: 'LINESeedKR-Bold', color: colors.textMuted },
   folderEmoji: { fontSize: 18 },
   sheetBtns: { flexDirection: 'row', gap: 10 }, // footer 고정 영역이 패딩을 담당
+  sheetTopRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  sheetTopInput: { flex: 1 },
 });
