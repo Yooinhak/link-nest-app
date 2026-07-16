@@ -26,6 +26,29 @@ elif [[ "$MODE" == "prebuild" ]]; then
   SHARE_INTENT=1 npx expo prebuild -p android
 fi
 
+# ── Android SDK 위치 확보 ──────────────────────────────────────
+# prebuild 가 android/ 를 재생성하면서 local.properties(=sdk.dir)를 지운다.
+# 그래서 매 빌드마다 SDK 경로를 찾아 다시 주입한다 ("SDK location not found" 방지).
+ANDROID_SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+if [[ -z "$ANDROID_SDK_DIR" ]]; then
+  for cand in "$HOME/Library/Android/sdk" "$HOME/Android/Sdk" "/usr/local/share/android-sdk"; do
+    if [[ -d "$cand" ]]; then ANDROID_SDK_DIR="$cand"; break; fi
+  done
+fi
+if [[ -z "$ANDROID_SDK_DIR" || ! -d "$ANDROID_SDK_DIR" ]]; then
+  echo "❌ Android SDK 를 찾지 못했어요."
+  echo "   Android Studio 설치 시 보통 ~/Library/Android/sdk 에 있습니다."
+  echo "   해결) 셸에 한 줄 추가 후 새 터미널:"
+  echo "         echo 'export ANDROID_HOME=\$HOME/Library/Android/sdk' >> ~/.zshrc"
+  echo "   또는) 이번만:  ANDROID_HOME=/경로/Android/sdk bun run android:apk:prebuild"
+  exit 1
+fi
+if [[ ! -f android/local.properties ]] || ! grep -q '^sdk.dir=' android/local.properties 2>/dev/null; then
+  echo "sdk.dir=$ANDROID_SDK_DIR" > android/local.properties
+  echo "📝 android/local.properties 에 sdk.dir 설정: $ANDROID_SDK_DIR"
+fi
+export ANDROID_HOME="$ANDROID_SDK_DIR"
+
 echo "🤖 Release APK 빌드"
 if [[ "${SENTRY_UPLOAD:-}" == "1" ]]; then
   (cd android && ./gradlew assembleRelease)
