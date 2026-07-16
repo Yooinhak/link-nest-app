@@ -333,8 +333,28 @@ export default function HomeScreen() {
       <GlassBackground variant={isPersonal ? 'personal' : 'group'} />
 
       <View style={{ paddingTop: insets.top + 10 }}>
-        {/* ── 채널 레일: 그룹 전환 ── */}
-        <GroupRail onCreateGroup={() => setCreateGroupVisible(true)} />
+        {/* ── 상단 글로벌 스트립: 채널 레일(그룹 전환) + 활동 벨(전역) ──
+            벨은 특정 공간이 아니라 앱 전역 기능이므로, 공간 헤더가 아닌 이 최상단
+            스트립 우측에 고정한다(스코프 오해 방지, 2026-07-16). */}
+        <View style={styles.railRow}>
+          <View style={styles.railFlex}>
+            <GroupRail onCreateGroup={() => setCreateGroupVisible(true)} />
+          </View>
+          <TouchableOpacity
+            style={styles.bellBtn}
+            onPress={() => navigation.navigate('Activity')}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={unreadCount > 0 ? `활동 — 새 소식 ${unreadCount}건` : '활동'}
+          >
+            <BellIcon size={18} color={colors.ink} strokeWidth={2.2} />
+            {unreadCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
 
         {/* ── 타이틀 블록 ── */}
         <View style={styles.titleRow}>
@@ -361,31 +381,15 @@ export default function HomeScreen() {
               </TouchableOpacity>
             )}
           </View>
-          <View style={styles.titleRight}>
-            <TouchableOpacity
-              style={styles.bellBtn}
-              onPress={() => navigation.navigate('Activity')}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={unreadCount > 0 ? `활동 — 새 소식 ${unreadCount}건` : '활동'}
+          {!isPersonal && currentGroupId && (
+            <Button
+              variant="glass"
+              size="small"
+              onPress={() => setInviteTarget({ id: currentGroupId, name: currentGroup?.name ?? '' })}
             >
-              <BellIcon size={18} color={colors.ink} strokeWidth={2.2} />
-              {unreadCount > 0 && (
-                <View style={styles.bellBadge}>
-                  <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-            {!isPersonal && currentGroupId && (
-              <Button
-                variant="glass"
-                size="small"
-                onPress={() => setInviteTarget({ id: currentGroupId, name: currentGroup?.name ?? '' })}
-              >
-                + 초대
-              </Button>
-            )}
-          </View>
+              + 초대
+            </Button>
+          )}
         </View>
       </View>
 
@@ -540,7 +544,8 @@ const styles = StyleSheet.create({
     color: colors.primaryDeep,
     marginBottom: 3,
   },
-  titleRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  railRow: { flexDirection: 'row', alignItems: 'center', paddingRight: 16, gap: 4 },
+  railFlex: { flex: 1, minWidth: 0 },
   bellBtn: {
     width: 38,
     height: 38,
