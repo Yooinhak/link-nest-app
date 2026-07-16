@@ -28,7 +28,7 @@ const Tab = createBottomTabNavigator<TabParamList>();
 
 const TAB_META: Record<string, { label: string; Icon: typeof HomeIcon }> = {
   Home: { label: '홈', Icon: HomeIcon },
-  Profile: { label: '프로필', Icon: UserIcon },
+  Profile: { label: '내 정보', Icon: UserIcon },
 };
 
 function FloatingTabBar({ state, navigation, onAddPress }: BottomTabBarProps & { onAddPress: () => void }) {

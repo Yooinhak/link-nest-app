@@ -114,7 +114,7 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.headerTitle} accessibilityRole="header">
-          프로필
+          내 정보
         </Text>
 
         {/* 프로필 카드 */}
@@ -154,7 +154,7 @@ export default function ProfileScreen() {
         <View style={styles.statsRow}>
           <View style={[styles.card, styles.statCard]}>
             <Text style={[styles.statNumber, { color: colors.primary }]}>{totalLinks ?? '–'}</Text>
-            <Text style={styles.statLabel}>전체 링크</Text>
+            <Text style={styles.statLabel}>모은 링크</Text>
           </View>
           <View style={[styles.card, styles.statCard]}>
             <Text style={styles.statNumber}>{groups.filter((g) => g.type !== 'personal').length}</Text>
