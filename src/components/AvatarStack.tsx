@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Image } from 'expo-image';
 
 import { colors } from '../constants/theme';
+import { normalizeAvatarUrl } from '../utils/avatarUrl';
 
 /**
  * 멤버 아바타 스택 — 시안 스펙: 최대 3개 + "+N", 원형, 흰 2px 링, -8px 겹침.
@@ -33,13 +34,25 @@ function colorFor(userId: string) {
 
 export function Avatar({ member, size = 28 }: { member: StackAvatar; size?: number }) {
   const round = { width: size, height: size, borderRadius: size / 2 };
-  if (member.avatarUrl) {
+  const uri = normalizeAvatarUrl(member.avatarUrl);
+
+  // 로드 실패 시 이니셜로 되돌린다 (카카오 http 차단·404 등).
+  // uri 가 바뀌면 렌더 중 비교로 failed 를 리셋한다(effect 없이 — 새 이미지 재시도).
+  const [failed, setFailed] = useState(false);
+  const [loadedUri, setLoadedUri] = useState(uri);
+  if (uri !== loadedUri) {
+    setLoadedUri(uri);
+    setFailed(false);
+  }
+
+  if (uri && !failed) {
     return (
       <Image
-        source={{ uri: member.avatarUrl }}
+        source={{ uri }}
         style={[round, styles.avatarImage]}
         contentFit="cover"
         cachePolicy="memory-disk"
+        onError={() => setFailed(true)}
       />
     );
   }

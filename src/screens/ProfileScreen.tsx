@@ -23,6 +23,7 @@ import { useToast } from '../components/Toast';
 import { colors, glass, shadows } from '../constants/theme';
 import { EXTERNAL_URLS } from '../constants/urls';
 import { useGroup } from '../contexts/GroupContext';
+import { normalizeAvatarUrl } from '../utils/avatarUrl';
 import { queryKeys } from '../utils/react-query/queryKeys';
 import { supabase } from '../utils/supabase/client';
 
@@ -33,6 +34,38 @@ import { supabase } from '../utils/supabase/client';
 
 // 계정 삭제를 최종 확정시키기 위해 사용자가 반드시 타이핑해야 하는 문구.
 const DELETE_CONFIRMATION_TEXT = '삭제';
+
+/**
+ * 내 프로필 아바타 — http→https 정규화 + 로드 실패 시 이메일 첫 글자 폴백.
+ * (카카오 http 아바타는 릴리즈 APK 에서 차단되므로 폴백이 없으면 회색 원이 남았다.)
+ */
+function ProfileAvatar({ avatarUrl, email }: { avatarUrl?: string | null; email?: string | null }) {
+  const uri = normalizeAvatarUrl(avatarUrl);
+  const [failed, setFailed] = useState(false);
+  const [loadedUri, setLoadedUri] = useState(uri);
+  if (uri !== loadedUri) {
+    setLoadedUri(uri);
+    setFailed(false);
+  }
+
+  if (uri && !failed) {
+    return (
+      <Image
+        source={{ uri }}
+        style={styles.avatar}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        transition={200}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <View style={styles.avatarFallback}>
+      <Text style={styles.avatarLetter}>{email?.charAt(0).toUpperCase() ?? '?'}</Text>
+    </View>
+  );
+}
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -121,18 +154,8 @@ export default function ProfileScreen() {
         <View style={[styles.card, styles.profileCard]}>
           {isLoading ? (
             <Skeleton width={56} height={56} borderRadius={28} />
-          ) : user?.user_metadata?.avatar_url ? (
-            <Image
-              source={{ uri: user.user_metadata.avatar_url }}
-              style={styles.avatar}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              transition={200}
-            />
           ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarLetter}>{user?.email?.charAt(0).toUpperCase() ?? '?'}</Text>
-            </View>
+            <ProfileAvatar avatarUrl={user?.user_metadata?.avatar_url} email={user?.email} />
           )}
           <View style={styles.profileInfo}>
             {isLoading ? (
