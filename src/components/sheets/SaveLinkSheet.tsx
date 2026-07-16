@@ -197,7 +197,12 @@ export default function SaveLinkSheet({ visible, onClose, initialUrl = null }: S
 
         </>
       ) : (
-        <Text style={styles.emptyText}>아직 폴더가 없어요. 홈에서 먼저 폴더를 만들어주세요.</Text>
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyText}>{'아직 폴더가 없어요.\n폴더를 먼저 만들면 링크를 담을 수 있어요.'}</Text>
+          <Button size="small" onPress={onClose}>
+            폴더 만들러 가기
+          </Button>
+        </View>
       )}
     </BottomSheet>
   );
@@ -344,11 +349,16 @@ const styles = StyleSheet.create({
     fontFamily: 'LINESeedKR',
     color: colors.textDisabled,
   },
+  emptyWrap: {
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 24,
+  },
   emptyText: {
     fontSize: 14,
     fontFamily: 'LINESeedKR',
     color: colors.textFaint,
     textAlign: 'center',
-    paddingVertical: 24,
+    lineHeight: 21,
   },
 });
