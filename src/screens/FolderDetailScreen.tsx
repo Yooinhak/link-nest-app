@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   FlatList,
@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +24,7 @@ import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
 import GlassBackground from '../components/GlassBackground';
 import {
+  ArrowUpDownIcon,
   ChevronLeftIcon,
   LayoutGridIcon,
   ListIcon as ListGlyphIcon,
@@ -53,6 +55,10 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 type FolderDetailRouteProp = RouteProp<MainStackParamList, 'FolderDetail'>;
 type Nav = NativeStackNavigationProp<MainStackParamList, 'FolderDetail'>;
 type SortOrder = 'newest' | 'oldest';
+
+// 보기 모드·정렬 순서는 사용자 선호로 기억한다 (방문마다 리셋되지 않도록).
+const VIEW_MODE_KEY = 'moaring.folderViewMode';
+const SORT_ORDER_KEY = 'moaring.folderSortOrder';
 
 /**
  * 폴더 상세 — 블루 글래스 시안 07 "링크 피드".
@@ -139,16 +145,36 @@ export default function FolderDetailScreen() {
     );
   };
 
+  // 저장된 보기/정렬 선호를 로드 (없으면 기본값 유지)
+  useEffect(() => {
+    AsyncStorage.multiGet([VIEW_MODE_KEY, SORT_ORDER_KEY])
+      .then((entries) => {
+        const map = Object.fromEntries(entries);
+        if (map[VIEW_MODE_KEY] === 'large' || map[VIEW_MODE_KEY] === 'compact') {
+          setViewMode(map[VIEW_MODE_KEY]);
+        }
+        if (map[SORT_ORDER_KEY] === 'newest' || map[SORT_ORDER_KEY] === 'oldest') {
+          setSortOrder(map[SORT_ORDER_KEY]);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     mediumTap();
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setViewMode(mode);
+    AsyncStorage.setItem(VIEW_MODE_KEY, mode).catch(() => {});
   }, []);
 
   const handleSortToggle = useCallback(() => {
     mediumTap();
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setSortOrder((prev) => (prev === 'newest' ? 'oldest' : 'newest'));
+    setSortOrder((prev) => {
+      const next = prev === 'newest' ? 'oldest' : 'newest';
+      AsyncStorage.setItem(SORT_ORDER_KEY, next).catch(() => {});
+      return next;
+    });
   }, []);
 
   const toggleSearch = useCallback(() => {
@@ -266,8 +292,9 @@ export default function FolderDetailScreen() {
           onPress={handleSortToggle}
           activeOpacity={0.75}
           accessibilityRole="button"
-          accessibilityLabel={`정렬 기준: ${sortOrder === 'newest' ? '최신순' : '오래된순'}`}
+          accessibilityLabel={`정렬 기준: ${sortOrder === 'newest' ? '최신순' : '오래된순'}. 눌러서 전환`}
         >
+          <ArrowUpDownIcon size={13} color={colors.textMuted} strokeWidth={2.2} />
           <Text style={styles.sortChipText}>{sortOrder === 'newest' ? '최신순' : '오래된순'}</Text>
         </TouchableOpacity>
 
@@ -495,15 +522,21 @@ const styles = StyleSheet.create({
     paddingTop: 14,
   },
   sortChip: {
-    backgroundColor: colors.ink,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: glass.bgSoft,
+    borderWidth: 1,
+    borderColor: glass.borderSoft,
     borderRadius: 19,
-    paddingHorizontal: 14,
+    paddingLeft: 11,
+    paddingRight: 13,
     paddingVertical: 8,
   },
   sortChipText: {
     fontSize: 12,
     fontFamily: 'LINESeedKR-Bold',
-    color: colors.white,
+    color: colors.textSub,
   },
   viewToggle: {
     flexDirection: 'row',
