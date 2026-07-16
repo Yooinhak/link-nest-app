@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 
-import { ActivityIndicator, SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,6 +11,7 @@ import { Avatar } from '../components/AvatarStack';
 import EmptyState from '../components/EmptyState';
 import FaviconBadge from '../components/FaviconBadge';
 import GlassBackground from '../components/GlassBackground';
+import Skeleton from '../components/Skeleton';
 import { colors, glass, warm } from '../constants/theme';
 import { useGroup } from '../contexts/GroupContext';
 import { type ActivityFeedItem, useActivityFeedQuery } from '../hooks/queries';
@@ -95,6 +96,25 @@ function ActivityRow({ item, onPress }: { item: ActivityFeedItem; onPress: () =>
   );
 }
 
+/** 활동 항목 로딩 플레이스홀더 — 실제 행과 같은 모양(§3 progressive-loading). */
+function ActivityRowSkeleton() {
+  return (
+    <View style={styles.row}>
+      <Skeleton width={36} height={36} borderRadius={18} />
+      <View style={styles.rowBody}>
+        <Skeleton width="70%" height={13} borderRadius={6} />
+        <View style={styles.linkCard}>
+          <Skeleton width={16} height={16} borderRadius={5} />
+          <View style={styles.linkBody}>
+            <Skeleton width="80%" height={12} borderRadius={6} />
+            <Skeleton width="45%" height={10} borderRadius={5} style={styles.skelGap} />
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function ActivityScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
@@ -157,8 +177,10 @@ export default function ActivityScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           isLoading ? (
-            <View style={styles.loading}>
-              <ActivityIndicator color={colors.primary} />
+            <View accessible accessibilityLabel="불러오는 중">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <ActivityRowSkeleton key={i} />
+              ))}
             </View>
           ) : (
             <EmptyState
@@ -224,5 +246,5 @@ const styles = StyleSheet.create({
   linkBody: { flex: 1, minWidth: 0 },
   linkTitle: { fontSize: 13, fontFamily: 'LINESeedKR-Bold', color: colors.ink },
   linkDomain: { fontSize: 11, fontFamily: 'LINESeedKR', color: colors.textFaint, marginTop: 1 },
-  loading: { paddingTop: 80, alignItems: 'center' },
+  skelGap: { marginTop: 6 },
 });
