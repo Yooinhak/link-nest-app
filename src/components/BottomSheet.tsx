@@ -14,8 +14,6 @@ import {
 import BottomSheetInline, {
   BottomSheetBackdrop,
   BottomSheetBackdropProps,
-  BottomSheetFooter,
-  BottomSheetFooterProps,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -116,7 +114,7 @@ export default function BottomSheet({
   const CHROME_HEIGHT = 36;
 
   // 고정 영역(top/footer) + 스크롤 콘텐츠를 모두 합산해 시트 높이를 결정.
-  // MAX 초과 시 가운데(children)만 스크롤 — scrollArea 의 flex:1 이 높이를 고정한다.
+  // MAX 초과 시 가운데(children)만 스크롤 — scrollMaxHeight(아래)로 스크롤 높이를 고정.
   // 주의: top/footer 는 onLayout 측정값에 자체 패딩이 포함되지만, 스크롤 콘텐츠는
   // 컨테이너 패딩(paddingTop 8 + 푸터 없을 때의 bottomPadding)이 측정 밖이라 더해준다.
   const hasFooter = !!footer;
@@ -164,25 +162,14 @@ export default function BottomSheet({
     [],
   );
 
-  // 고정 푸터 — gorhom 공식 footerComponent 로 시트 바닥에 절대 위치로 핀 고정.
-  // 예전엔 body 안에 flex 로 넣었는데, 콘텐츠가 시트 높이를 넘으면 스크롤뷰가 안 줄어
-  // 푸터가 화면 밖으로 밀려 사라졌다(폴더 많은 공간 + 키보드 조합). BottomSheetFooter 는
-  // 스크롤/콘텐츠 높이와 무관하게 항상 바닥에 붙는다(2026-07-16).
-  const renderFooter = useCallback(
-    (props: BottomSheetFooterProps) => {
-      if (!footer) return null;
-      return (
-        <BottomSheetFooter {...props} bottomInset={0}>
-          <View
-            style={[styles.footerArea, { paddingBottom: keyboardHeight > 0 ? 12 : bottomPadding }]}
-            onLayout={onFooterLayout}
-          >
-            {footer}
-          </View>
-        </BottomSheetFooter>
-      );
-    },
-    [footer, keyboardHeight, bottomPadding, onFooterLayout],
+  // 스크롤 영역 높이를 '직접' 계산해 고정한다.
+  // gorhom 시트 안에서 flex(shrink/grow)나 footerComponent 로 스크롤+고정 푸터를 잡는 건
+  // 우리 커스텀 Modal+inline+수동 bottomInset 조합에서 불안정했다(푸터가 사라지거나 위로
+  // 튀어나옴). 대신 시트 높이 - 크롬 - 상단 - 푸터 를 스크롤 maxHeight 로 박으면, 콘텐츠가
+  // 아무리 길어도 가운데만 스크롤되고 하단 고정 푸터가 항상 제자리에 남는다 (2026-07-16).
+  const scrollMaxHeight = Math.max(
+    snapPoints[0] - CHROME_HEIGHT - topHeight - footerHeight - 8,
+    96,
   );
 
   if (!rendered) return null;
@@ -215,7 +202,6 @@ export default function BottomSheet({
           keyboardBehavior="extend"
           keyboardBlurBehavior="restore"
           backdropComponent={renderBackdrop}
-          footerComponent={footer ? renderFooter : undefined}
           backgroundStyle={styles.sheetBg}
           handleIndicatorStyle={styles.handle}
           style={styles.sheetShadow}
@@ -236,14 +222,13 @@ export default function BottomSheet({
               </View>
             )}
 
-            {/* ── 스크롤 영역 (children) — 고정 푸터는 footerComponent 로 오버레이 ── */}
+            {/* ── 스크롤 영역 (children) — 높이를 직접 고정해 가운데만 스크롤 ── */}
             <BottomSheetScrollView
-              style={styles.scrollArea}
+              style={[styles.scrollArea, { maxHeight: scrollMaxHeight }]}
               contentContainerStyle={[
                 styles.content,
-                // 푸터가 있으면 오버레이된 footer 만큼 하단 패딩을 줘 마지막 항목이 가리지
-                // 않게 하고, 없으면 세이프에어리어 여백을 준다.
-                { paddingBottom: footer ? (footerHeight || 72) + 12 : bottomPadding },
+                // 푸터가 없으면 스크롤 끝에 하단 패딩을 직접 준다
+                !footer && { paddingBottom: bottomPadding },
               ]}
               // 시트 전체가 bottomInset 으로 키보드 위에 떠 있으므로, 스크롤 자체를
               // 키보드에 맞춰 추가로 밀어올릴 필요가 없다 (이중 여백 방지).
@@ -253,6 +238,21 @@ export default function BottomSheet({
             >
               <View onLayout={onContentLayout}>{children}</View>
             </BottomSheetScrollView>
+
+            {/* ── 고정 푸터: CTA 버튼 (스크롤 아래, 시트 하단 고정) ── */}
+            {footer && (
+              <View
+                style={[
+                  styles.footerArea,
+                  // 키보드가 뜨면 시트가 키보드 위로 떠서 하단 세이프에어리어가
+                  // 불필요 — 여백을 줄여 버튼을 키보드 바로 위에 붙인다.
+                  { paddingBottom: keyboardHeight > 0 ? 12 : bottomPadding },
+                ]}
+                onLayout={onFooterLayout}
+              >
+                {footer}
+              </View>
+            )}
           </View>
         </BottomSheetInline>
       </GestureHandlerRootView>
@@ -286,11 +286,9 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   scrollArea: {
-    // 남은 공간에 높이를 '고정'해(flexBasis 0) 콘텐츠가 길어도 가운데만 스크롤되고
-    // 고정 footer 가 시트 밖으로 밀리지 않게 한다. flexShrink 만으로는 gorhom
-    // ScrollView 가 콘텐츠 높이 그대로 커져 footer 가 사라지는 버그가 있었다(2026-07-16).
-    flex: 1,
-    minHeight: 0,
+    // 높이는 인라인 maxHeight(scrollMaxHeight)로 고정한다. flexGrow:0 이라 콘텐츠보다
+    // 커지지 않고, maxHeight 를 넘으면 내부에서만 스크롤된다.
+    flexGrow: 0,
   },
   content: {
     paddingHorizontal: 24,
