@@ -19,6 +19,7 @@ import Svg, { Path } from 'react-native-svg';
 import GlassBackground from '../components/GlassBackground';
 import { useToast } from '../components/Toast';
 import { colors, glass } from '../constants/theme';
+import { EXTERNAL_URLS } from '../constants/urls';
 import { supabase } from '../utils/supabase/client';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -237,7 +238,25 @@ export default function LoginScreen() {
         <AppleLoginButton />
         <SocialLoginButton type="kakao" />
         <SocialLoginButton type="google" />
-        <Text style={styles.terms}>계속 진행하면 이용약관에 동의하게 됩니다</Text>
+        <Text style={styles.terms}>
+          계속 진행하면{' '}
+          <Text
+            style={styles.termsLink}
+            onPress={() => Linking.openURL(EXTERNAL_URLS.TERMS_OF_SERVICE)}
+            accessibilityRole="link"
+          >
+            이용약관
+          </Text>
+          {' 및 '}
+          <Text
+            style={styles.termsLink}
+            onPress={() => Linking.openURL(EXTERNAL_URLS.PRIVACY_POLICY)}
+            accessibilityRole="link"
+          >
+            개인정보 처리방침
+          </Text>
+          에 동의하게 됩니다
+        </Text>
       </View>
     </View>
   );
@@ -323,5 +342,11 @@ const styles = StyleSheet.create({
     fontFamily: 'LINESeedKR',
     color: '#8F89AB', // 딥 라벤더 공기 위 약관 텍스트 (v3)
     marginTop: 8,
+    lineHeight: 18,
+  },
+  termsLink: {
+    fontFamily: 'LINESeedKR-Bold',
+    color: '#6D5EF0', // primaryDeep — 탭 가능함을 드러내는 액센트
+    textDecorationLine: 'underline',
   },
 });
