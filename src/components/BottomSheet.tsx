@@ -114,7 +114,7 @@ export default function BottomSheet({
   const CHROME_HEIGHT = 36;
 
   // 고정 영역(top/footer) + 스크롤 콘텐츠를 모두 합산해 시트 높이를 결정.
-  // MAX 초과 시 가운데(children)만 스크롤 — flexShrink 가 스크롤뷰를 줄인다.
+  // MAX 초과 시 가운데(children)만 스크롤 — scrollArea 의 flex:1 이 높이를 고정한다.
   // 주의: top/footer 는 onLayout 측정값에 자체 패딩이 포함되지만, 스크롤 콘텐츠는
   // 컨테이너 패딩(paddingTop 8 + 푸터 없을 때의 bottomPadding)이 측정 밖이라 더해준다.
   const hasFooter = !!footer;
@@ -276,8 +276,11 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   scrollArea: {
-    flexGrow: 0,
-    flexShrink: 1, // MAX 초과 시 가운데만 줄어들며 스크롤
+    // 남은 공간에 높이를 '고정'해(flexBasis 0) 콘텐츠가 길어도 가운데만 스크롤되고
+    // 고정 footer 가 시트 밖으로 밀리지 않게 한다. flexShrink 만으로는 gorhom
+    // ScrollView 가 콘텐츠 높이 그대로 커져 footer 가 사라지는 버그가 있었다(2026-07-16).
+    flex: 1,
+    minHeight: 0,
   },
   content: {
     paddingHorizontal: 24,
