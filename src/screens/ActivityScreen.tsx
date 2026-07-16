@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 
 import { ActivityIndicator, SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,7 +11,6 @@ import { Avatar } from '../components/AvatarStack';
 import EmptyState from '../components/EmptyState';
 import FaviconBadge from '../components/FaviconBadge';
 import GlassBackground from '../components/GlassBackground';
-import { ChevronLeftIcon } from '../components/icons';
 import { colors, glass, warm } from '../constants/theme';
 import { useGroup } from '../contexts/GroupContext';
 import { type ActivityFeedItem, useActivityFeedQuery } from '../hooks/queries';
@@ -23,12 +22,13 @@ import { queryKeys } from '../utils/react-query/queryKeys';
 import { relativeTime } from '../utils/relativeTime';
 
 /**
- * 활동 화면 — 공유 그룹 전용 전역 피드 (리텐션).
+ * 활동 화면 — 공유 그룹 전용 전역 피드 (리텐션). 하단 [활동] 탭.
  * "○○님이 «폴더»에 링크 추가"를 날짜별로 묶어 최신순으로 보여준다.
- * 진입 시 모든 공유 그룹을 '읽음' 처리해 홈 종·레일 점을 함께 끈다.
+ * 탭 포커스 시 모든 공유 그룹을 '읽음' 처리해 탭 배지·레일 점을 함께 끈다.
  */
 
-type Nav = NativeStackNavigationProp<MainStackParamList, 'Activity'>;
+// 탭 화면이지만 부모 스택의 FolderDetail 로 이동하므로 스택 nav 타입으로 단언한다.
+type Nav = NativeStackNavigationProp<MainStackParamList>;
 
 function sectionTitle(iso: string | null): string {
   if (!iso) return '기타';
@@ -102,10 +102,12 @@ export default function ActivityScreen() {
   const { data: feed, isLoading } = useActivityFeedQuery(true);
   const { markAllSeen, markGroupSeen } = useActivityUnread();
 
-  // 진입 시(그리고 활동 데이터가 로드되면) 모두 읽음
-  useEffect(() => {
-    markAllSeen();
-  }, [markAllSeen]);
+  // 탭이 포커스될 때마다(그리고 활동 데이터가 로드되면) 모두 읽음
+  useFocusEffect(
+    useCallback(() => {
+      markAllSeen();
+    }, [markAllSeen]),
+  );
 
   const sections = useMemo(() => {
     const out: { title: string; data: ActivityFeedItem[] }[] = [];
@@ -139,16 +141,7 @@ export default function ActivityScreen() {
     <View style={styles.container}>
       <GlassBackground variant="group" />
 
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로 가기"
-        >
-          <ChevronLeftIcon size={17} color={colors.ink} strokeWidth={2.4} />
-        </TouchableOpacity>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Text style={styles.headerTitle} accessibilityRole="header">
           활동
         </Text>
@@ -159,7 +152,7 @@ export default function ActivityScreen() {
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => <ActivityRow item={item} onPress={() => handleOpen(item)} />}
         renderSectionHeader={({ section }) => <Text style={styles.sectionHeader}>{section.title}</Text>}
-        contentContainerStyle={[styles.list, { paddingBottom: 40 + insets.bottom }]}
+        contentContainerStyle={[styles.list, { paddingBottom: 120 + insets.bottom }]}
         stickySectionHeadersEnabled={false}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
@@ -184,21 +177,8 @@ export default function ActivityScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F6F9FE' },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
     paddingHorizontal: 20,
-    paddingBottom: 6,
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: glass.bg,
-    borderWidth: 1,
-    borderColor: glass.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingBottom: 8,
   },
   headerTitle: {
     fontSize: 20,

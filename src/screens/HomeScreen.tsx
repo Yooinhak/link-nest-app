@@ -17,7 +17,7 @@ import FolderIdentityPicker from '../components/FolderIdentityPicker';
 import FolderTilePreview from '../components/FolderTilePreview';
 import GlassBackground from '../components/GlassBackground';
 import GroupRail from '../components/GroupRail';
-import { BellIcon, FolderIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/icons';
+import { FolderIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/icons';
 import Input from '../components/Input';
 import CreateGroupSheet from '../components/sheets/CreateGroupSheet';
 import InviteAcceptSheet from '../components/sheets/InviteAcceptSheet';
@@ -143,8 +143,8 @@ export default function HomeScreen() {
   const { currentGroup, currentGroupId, myRole, isPersonal } = useGroup();
   const canEdit = myRole !== 'viewer';
 
-  // 리텐션: 공유 그룹 안읽음 수(홈 종 배지) + 폴더 열람 시 '읽음' 처리
-  const { unreadCount, markGroupSeen } = useActivityUnread();
+  // 리텐션: 폴더 열람 시 해당 그룹을 '읽음' 처리(활동 탭 배지·레일 점 해제)
+  const { markGroupSeen } = useActivityUnread();
 
   // 공유 그룹이면 멤버 아바타 스택 표시 (탭 → 그룹 관리)
   const { data: members = [] } = useGroupMembersQuery(!isPersonal ? currentGroupId : null);
@@ -333,28 +333,8 @@ export default function HomeScreen() {
       <GlassBackground variant={isPersonal ? 'personal' : 'group'} />
 
       <View style={{ paddingTop: insets.top + 10 }}>
-        {/* ── 상단 글로벌 스트립: 채널 레일(그룹 전환) + 활동 벨(전역) ──
-            벨은 특정 공간이 아니라 앱 전역 기능이므로, 공간 헤더가 아닌 이 최상단
-            스트립 우측에 고정한다(스코프 오해 방지, 2026-07-16). */}
-        <View style={styles.railRow}>
-          <View style={styles.railFlex}>
-            <GroupRail onCreateGroup={() => setCreateGroupVisible(true)} />
-          </View>
-          <TouchableOpacity
-            style={styles.bellBtn}
-            onPress={() => navigation.navigate('Activity')}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={unreadCount > 0 ? `활동 — 새 소식 ${unreadCount}건` : '활동'}
-          >
-            <BellIcon size={18} color={colors.ink} strokeWidth={2.2} />
-            {unreadCount > 0 && (
-              <View style={styles.bellBadge}>
-                <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
+        {/* ── 채널 레일: 그룹 전환 (전역 '활동'은 하단 탭으로 이동) ── */}
+        <GroupRail onCreateGroup={() => setCreateGroupVisible(true)} />
 
         {/* ── 타이틀 블록 ── */}
         <View style={styles.titleRow}>
@@ -533,33 +513,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   titleLeft: { flexShrink: 1 },
-  railRow: { flexDirection: 'row', alignItems: 'center', paddingRight: 16, gap: 4 },
-  railFlex: { flex: 1, minWidth: 0 },
-  bellBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: glass.bg,
-    borderWidth: 1,
-    borderColor: glass.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bellBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    backgroundColor: colors.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.white,
-  },
-  bellBadgeText: { fontSize: 9.5, fontFamily: 'LINESeedKR-Bold', color: colors.white },
   title: {
     fontSize: 26,
     fontFamily: 'LINESeedKR-Bold',

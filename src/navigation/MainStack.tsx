@@ -5,7 +5,6 @@ import { View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import OfflineBanner from '../components/OfflineBanner';
-import ActivityScreen from '../screens/ActivityScreen';
 import FolderDetailScreen from '../screens/FolderDetailScreen';
 import MemberManageScreen from '../screens/MemberManageScreen';
 
@@ -27,7 +26,6 @@ export default function MainStack() {
         <Stack.Screen name="MainTabs" component={TabNavigator} />
         <Stack.Screen name="FolderDetail" component={FolderDetailScreen} />
         <Stack.Screen name="MemberManage" component={MemberManageScreen} />
-        <Stack.Screen name="Activity" component={ActivityScreen} />
       </Stack.Navigator>
     </View>
   );
