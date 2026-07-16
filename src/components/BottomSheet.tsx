@@ -14,6 +14,8 @@ import {
 import BottomSheetInline, {
   BottomSheetBackdrop,
   BottomSheetBackdropProps,
+  BottomSheetFooter,
+  BottomSheetFooterProps,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -162,6 +164,27 @@ export default function BottomSheet({
     [],
   );
 
+  // 고정 푸터 — gorhom 공식 footerComponent 로 시트 바닥에 절대 위치로 핀 고정.
+  // 예전엔 body 안에 flex 로 넣었는데, 콘텐츠가 시트 높이를 넘으면 스크롤뷰가 안 줄어
+  // 푸터가 화면 밖으로 밀려 사라졌다(폴더 많은 공간 + 키보드 조합). BottomSheetFooter 는
+  // 스크롤/콘텐츠 높이와 무관하게 항상 바닥에 붙는다(2026-07-16).
+  const renderFooter = useCallback(
+    (props: BottomSheetFooterProps) => {
+      if (!footer) return null;
+      return (
+        <BottomSheetFooter {...props} bottomInset={0}>
+          <View
+            style={[styles.footerArea, { paddingBottom: keyboardHeight > 0 ? 12 : bottomPadding }]}
+            onLayout={onFooterLayout}
+          >
+            {footer}
+          </View>
+        </BottomSheetFooter>
+      );
+    },
+    [footer, keyboardHeight, bottomPadding, onFooterLayout],
+  );
+
   if (!rendered) return null;
 
   const hasFixedHeader = !!title || !!fixedTop;
@@ -192,6 +215,7 @@ export default function BottomSheet({
           keyboardBehavior="extend"
           keyboardBlurBehavior="restore"
           backdropComponent={renderBackdrop}
+          footerComponent={footer ? renderFooter : undefined}
           backgroundStyle={styles.sheetBg}
           handleIndicatorStyle={styles.handle}
           style={styles.sheetShadow}
@@ -212,13 +236,14 @@ export default function BottomSheet({
               </View>
             )}
 
-            {/* ── 스크롤 영역 (children) ── */}
+            {/* ── 스크롤 영역 (children) — 고정 푸터는 footerComponent 로 오버레이 ── */}
             <BottomSheetScrollView
               style={styles.scrollArea}
               contentContainerStyle={[
                 styles.content,
-                // 푸터가 없으면 스크롤 끝에 하단 패딩을 직접 준다
-                !footer && { paddingBottom: bottomPadding },
+                // 푸터가 있으면 오버레이된 footer 만큼 하단 패딩을 줘 마지막 항목이 가리지
+                // 않게 하고, 없으면 세이프에어리어 여백을 준다.
+                { paddingBottom: footer ? (footerHeight || 72) + 12 : bottomPadding },
               ]}
               // 시트 전체가 bottomInset 으로 키보드 위에 떠 있으므로, 스크롤 자체를
               // 키보드에 맞춰 추가로 밀어올릴 필요가 없다 (이중 여백 방지).
@@ -228,21 +253,6 @@ export default function BottomSheet({
             >
               <View onLayout={onContentLayout}>{children}</View>
             </BottomSheetScrollView>
-
-            {/* ── 고정 푸터: CTA 버튼 ── */}
-            {footer && (
-              <View
-                style={[
-                  styles.footerArea,
-                  // 키보드가 뜨면 시트가 키보드 위로 떠서 하단 세이프에어리어가
-                  // 불필요 — 여백을 줄여 버튼을 키보드 바로 위에 붙인다.
-                  { paddingBottom: keyboardHeight > 0 ? 12 : bottomPadding },
-                ]}
-                onLayout={onFooterLayout}
-              >
-                {footer}
-              </View>
-            )}
           </View>
         </BottomSheetInline>
       </GestureHandlerRootView>
