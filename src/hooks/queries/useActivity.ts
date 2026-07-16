@@ -46,3 +46,92 @@ export function useGroupActivityQuery(enabled = true) {
     },
   });
 }
+
+/**
+ * 활동 피드 항목 — "○○님이 «폴더»에 링크 추가". 공유 그룹만.
+ * ActivityScreen 에서 날짜별로 묶어 보여준다.
+ */
+export type ActivityFeedItem = {
+  id: number;
+  url: string;
+  description: string | null;
+  createdAt: string | null;
+  userId: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
+  folderId: number;
+  folderName: string;
+  folderColor: string | null;
+  folderEmoji: string | null;
+  groupId: string;
+  groupName: string;
+  groupEmoji: string | null;
+};
+
+type FeedRow = {
+  id: number;
+  url: string;
+  description: string | null;
+  created_at: string | null;
+  user_id: string | null;
+  folder: {
+    id: number;
+    name: string;
+    color: string | null;
+    emoji: string | null;
+    group_id: string;
+    group: { id: string; name: string; emoji: string | null; type: string } | null;
+  } | null;
+};
+
+/**
+ * 최근 활동 피드. RLS 로 내가 볼 수 있는 posts 만 조회 → 공유 그룹 항목만 남긴다.
+ * 추가자 이름/아바타는 profiles 에서 별도 조회해 매핑(멤버 쿼리와 동일 패턴).
+ */
+export function useActivityFeedQuery(enabled = true) {
+  return useQuery({
+    queryKey: [queryKeys.GROUP_ACTIVITY, 'feed'],
+    enabled,
+    staleTime: 30_000,
+    queryFn: async (): Promise<ActivityFeedItem[]> => {
+      const { data, error } = await supabase
+        .from('posts')
+        .select(
+          'id, url, description, created_at, user_id, folder:folders(id, name, color, emoji, group_id, group:groups(id, name, emoji, type))',
+        )
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+
+      const rows = (data ?? []) as unknown as FeedRow[];
+      const shared = rows.filter((r) => r.folder?.group && r.folder.group.type !== 'personal');
+
+      const ids = [...new Set(shared.map((r) => r.user_id).filter((v): v is string => !!v))];
+      const profileMap = new Map<string, { display_name: string | null; avatar_url: string | null }>();
+      if (ids.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url')
+          .in('id', ids);
+        for (const p of profiles ?? []) profileMap.set(p.id, p);
+      }
+
+      return shared.map((r) => ({
+        id: r.id,
+        url: r.url,
+        description: r.description,
+        createdAt: r.created_at,
+        userId: r.user_id,
+        displayName: r.user_id ? (profileMap.get(r.user_id)?.display_name ?? null) : null,
+        avatarUrl: r.user_id ? (profileMap.get(r.user_id)?.avatar_url ?? null) : null,
+        folderId: r.folder!.id,
+        folderName: r.folder!.name,
+        folderColor: r.folder!.color,
+        folderEmoji: r.folder!.emoji,
+        groupId: r.folder!.group!.id,
+        groupName: r.folder!.group!.name,
+        groupEmoji: r.folder!.group!.emoji,
+      }));
+    },
+  });
+}

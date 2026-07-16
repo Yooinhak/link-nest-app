@@ -7,8 +7,8 @@ export {
   useDeferredDeleteFolder,
 } from './useFolders';
 export { usePostsQuery, useCreatePost, useUpdatePost, useDeletePost, useDeferredDeletePost } from './usePosts';
-export { useGroupActivityQuery } from './useActivity';
-export type { GroupActivityMap } from './useActivity';
+export { useGroupActivityQuery, useActivityFeedQuery } from './useActivity';
+export type { GroupActivityMap, ActivityFeedItem } from './useActivity';
 export {
   useMyGroupsQuery,
   useGroupMembersQuery,

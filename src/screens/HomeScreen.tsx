@@ -17,7 +17,7 @@ import FolderIdentityPicker from '../components/FolderIdentityPicker';
 import FolderTilePreview from '../components/FolderTilePreview';
 import GlassBackground from '../components/GlassBackground';
 import GroupRail from '../components/GroupRail';
-import { FolderIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/icons';
+import { BellIcon, FolderIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/icons';
 import Input from '../components/Input';
 import CreateGroupSheet from '../components/sheets/CreateGroupSheet';
 import InviteAcceptSheet from '../components/sheets/InviteAcceptSheet';
@@ -34,6 +34,7 @@ import {
   useGroupMembersQuery,
   useUpdateFolder,
 } from '../hooks/queries';
+import { useActivityUnread } from '../hooks/useActivityUnread';
 import { useInviteDeepLink } from '../hooks/useInviteDeepLink';
 import { useShareIntent } from '../hooks/useShareIntent';
 import { MainStackParamList } from '../navigation/types';
@@ -141,6 +142,9 @@ export default function HomeScreen() {
   // ── 그룹 상태 ──────────────────────────────────────────────
   const { currentGroup, currentGroupId, myRole, isPersonal } = useGroup();
   const canEdit = myRole !== 'viewer';
+
+  // 리텐션: 공유 그룹 안읽음 수(홈 종 배지) + 폴더 열람 시 '읽음' 처리
+  const { unreadCount, markGroupSeen } = useActivityUnread();
 
   // 공유 그룹이면 멤버 아바타 스택 표시 (탭 → 그룹 관리)
   const { data: members = [] } = useGroupMembersQuery(!isPersonal ? currentGroupId : null);
@@ -250,6 +254,8 @@ export default function HomeScreen() {
 
   const handleOpenFolder = useCallback(
     (id: number, name: string, color: string | null, emoji: string | null) => {
+      // 이 그룹의 폴더를 열었으니 해당 그룹은 '읽음' 처리(안읽음 점/배지 해제)
+      if (currentGroupId) markGroupSeen(currentGroupId);
       navigation.navigate('FolderDetail', {
         folderId: String(id),
         folderName: name,
@@ -257,7 +263,7 @@ export default function HomeScreen() {
         folderEmoji: emoji ?? undefined,
       });
     },
-    [navigation],
+    [navigation, currentGroupId, markGroupSeen],
   );
 
   const handleEditFolder = useCallback((id: number, name: string, color: FolderColorKey, emoji: string | null) => {
@@ -355,15 +361,31 @@ export default function HomeScreen() {
               </TouchableOpacity>
             )}
           </View>
-          {!isPersonal && currentGroupId && (
-            <Button
-              variant="glass"
-              size="small"
-              onPress={() => setInviteTarget({ id: currentGroupId, name: currentGroup?.name ?? '' })}
+          <View style={styles.titleRight}>
+            <TouchableOpacity
+              style={styles.bellBtn}
+              onPress={() => navigation.navigate('Activity')}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={unreadCount > 0 ? `활동 — 새 소식 ${unreadCount}건` : '활동'}
             >
-              + 초대
-            </Button>
-          )}
+              <BellIcon size={18} color={colors.ink} strokeWidth={2.2} />
+              {unreadCount > 0 && (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {!isPersonal && currentGroupId && (
+              <Button
+                variant="glass"
+                size="small"
+                onPress={() => setInviteTarget({ id: currentGroupId, name: currentGroup?.name ?? '' })}
+              >
+                + 초대
+              </Button>
+            )}
+          </View>
         </View>
       </View>
 
@@ -518,6 +540,32 @@ const styles = StyleSheet.create({
     color: colors.primaryDeep,
     marginBottom: 3,
   },
+  titleRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  bellBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: glass.bg,
+    borderWidth: 1,
+    borderColor: glass.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.white,
+  },
+  bellBadgeText: { fontSize: 9.5, fontFamily: 'LINESeedKR-Bold', color: colors.white },
   title: {
     fontSize: 26,
     fontFamily: 'LINESeedKR-Bold',

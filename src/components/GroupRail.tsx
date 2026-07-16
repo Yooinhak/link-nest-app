@@ -1,17 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { colors, getGroupColor, glass, shadows } from '../constants/theme';
 import { useGroup } from '../contexts/GroupContext';
-import { useGroupActivityQuery } from '../hooks/queries';
+import { useActivityUnread } from '../hooks/useActivityUnread';
 import { lightTap } from '../utils/haptics';
 
 import { PlusIcon } from './icons';
-
-const LAST_SEEN_KEY = 'moaring.groupLastSeen';
 
 /**
  * 채널 레일 — 블루 글래스 시안 02/06. "채널 레일 = 그룹 전환".
@@ -26,38 +22,11 @@ interface GroupRailProps {
 
 export default function GroupRail({ onCreateGroup }: GroupRailProps) {
   const { groups, currentGroupId, selectGroup } = useGroup();
-  const { data: activity = {} } = useGroupActivityQuery(groups.length > 0);
-  const [lastSeen, setLastSeen] = useState<Record<string, string>>({});
+  const { isUnread } = useActivityUnread();
 
-  // 저장된 lastSeen(그룹별 마지막으로 본 활동 시각) 로드
-  useEffect(() => {
-    AsyncStorage.getItem(LAST_SEEN_KEY)
-      .then((raw) => {
-        if (raw) setLastSeen(JSON.parse(raw));
-      })
-      .catch(() => {});
-  }, []);
-
-  // 지금 보고 있는 그룹은 '읽음' — 최신 활동 시각을 lastSeen 에 반영해 점을 끈다
-  useEffect(() => {
-    if (!currentGroupId) return;
-    const latest = activity[currentGroupId];
-    if (!latest) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLastSeen((prev) => {
-      if (prev[currentGroupId] === latest) return prev;
-      const next = { ...prev, [currentGroupId]: latest };
-      AsyncStorage.setItem(LAST_SEEN_KEY, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
-  }, [currentGroupId, activity]);
-
-  // 공유 그룹 + 현재 보고 있지 않음 + 마지막으로 본 시각보다 최신 활동이 있으면 안읽음
-  const hasUnread = (g: { id: string; type: string }) =>
-    g.type !== 'personal' &&
-    g.id !== currentGroupId &&
-    !!activity[g.id] &&
-    activity[g.id] > (lastSeen[g.id] ?? '');
+  // 공유 그룹에 마지막으로 본 시각보다 최신 활동이 있으면 안읽음 점 표시.
+  // '읽음' 처리는 폴더 열람(markGroupSeen)·활동 피드 진입(markAllSeen)에서 담당.
+  const hasUnread = (g: { id: string; type: string }) => isUnread(g.id, g.type);
 
   const sorted = [...groups].sort((a, b) => (a.type === b.type ? 0 : a.type === 'personal' ? -1 : 1));
 
