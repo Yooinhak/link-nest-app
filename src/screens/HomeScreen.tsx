@@ -359,10 +359,6 @@ export default function HomeScreen() {
         {/* ── 타이틀 블록 ── */}
         <View style={styles.titleRow}>
           <View style={styles.titleLeft}>
-            {/* 공간 단서 — 배경색에만 의존하지 않도록 개인/공유를 텍스트로도 명시 */}
-            <Text style={[styles.spaceLabel, !isPersonal && { color: warm.text }]}>
-              {isPersonal ? '🏠 개인 공간' : '👥 공유 공간'}
-            </Text>
             <Text style={styles.title} numberOfLines={1}>
               {displayName}
             </Text>
@@ -537,13 +533,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   titleLeft: { flexShrink: 1 },
-  spaceLabel: {
-    fontSize: 11,
-    fontFamily: 'LINESeedKR-Bold',
-    letterSpacing: 0.4,
-    color: colors.primaryDeep,
-    marginBottom: 3,
-  },
   railRow: { flexDirection: 'row', alignItems: 'center', paddingRight: 16, gap: 4 },
   railFlex: { flex: 1, minWidth: 0 },
   bellBtn: {
