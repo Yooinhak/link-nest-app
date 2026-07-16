@@ -13,6 +13,7 @@
     "android:apk": "bash scripts/build-android-apk.sh",
     "android:apk:prebuild": "bash scripts/build-android-apk.sh prebuild",
     "android:apk:clean": "bash scripts/build-android-apk.sh clean",
+    "release:android": "bash scripts/release-android.sh",
     "lint": "eslint 'src/**/*.{ts,tsx}' --max-warnings 0",
     "lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
     "format": "prettier --write 'src/**/*.{ts,tsx}'",
