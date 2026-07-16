@@ -1,6 +1,6 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Animated, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -13,6 +13,7 @@ import Button from '../components/Button';
 import ContextMenu, { ContextMenuItem } from '../components/ContextMenu';
 import { pushRecentEmoji } from '../components/EmojiPicker';
 import EmptyState from '../components/EmptyState';
+import FolderCardSkeleton from '../components/FolderCardSkeleton';
 import FolderIdentityPicker from '../components/FolderIdentityPicker';
 import FolderTilePreview from '../components/FolderTilePreview';
 import GlassBackground from '../components/GlassBackground';
@@ -36,6 +37,7 @@ import {
 } from '../hooks/queries';
 import { useActivityUnread } from '../hooks/useActivityUnread';
 import { useInviteDeepLink } from '../hooks/useInviteDeepLink';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 import { useShareIntent } from '../hooks/useShareIntent';
 import { MainStackParamList } from '../navigation/types';
 
@@ -155,7 +157,21 @@ export default function HomeScreen() {
   const { inviteToken, clearInviteToken } = useInviteDeepLink();
 
   // ── 폴더 데이터 ────────────────────────────────────────────
-  const { data: folderList, refetch, isRefetching } = useFoldersQuery(currentGroupId);
+  const { data: folderList, isLoading, refetch, isRefetching } = useFoldersQuery(currentGroupId);
+
+  // 첫 로딩(캐시 없음)일 때만 스켈레톤 → 로드 완료 시 실제 그리드 페이드인.
+  // isFetching 이 아니라 isLoading 을 써서 캐시된 공간 전환에선 번쩍임이 없다.
+  const reduceMotion = useReduceMotion();
+  const gridFade = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (isLoading) return;
+    if (reduceMotion) {
+      gridFade.setValue(1);
+      return;
+    }
+    gridFade.setValue(0);
+    Animated.timing(gridFade, { toValue: 1, duration: 180, useNativeDriver: true }).start();
+  }, [isLoading, reduceMotion, gridFade]);
   const createFolder = useCreateFolder(currentGroupId);
   const updateFolder = useUpdateFolder(currentGroupId);
   const deferredDelete = useDeferredDeleteFolder(currentGroupId);
@@ -369,41 +385,56 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <FlatList
-        data={gridData}
-        key="folder-grid-2col"
-        numColumns={2}
-        keyExtractor={keyExtractor}
-        renderItem={renderItem}
-        columnWrapperStyle={styles.gridRow}
-        contentContainerStyle={[styles.list, { paddingBottom: 130 + insets.bottom }]}
-        showsVerticalScrollIndicator={false}
-        removeClippedSubviews
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        windowSize={7}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
-        }
-        ListEmptyComponent={
-          <EmptyState
-            type="folder"
-            title="폴더가 없어요"
-            subtitle={
-              isPersonal
-                ? '인스타에서 본 맛집, 유튜브에서 본 카페 —\n폴더를 만들어 링크를 모아보세요'
-                : '친구와 함께 첫 폴더를 만들어보세요'
+      {isLoading ? (
+        // 첫 로딩: 실제 그리드와 같은 모양의 스켈레톤 6개(거짓 빈 화면·점프 방지)
+        <View style={styles.list} accessible accessibilityLabel="폴더 불러오는 중">
+          {[0, 1, 2].map((row) => (
+            <View key={row} style={styles.skelRow}>
+              <FolderCardSkeleton width={cardWidth} />
+              <FolderCardSkeleton width={cardWidth} />
+            </View>
+          ))}
+        </View>
+      ) : (
+        <Animated.View style={[styles.gridWrap, { opacity: gridFade }]}>
+          <FlatList
+            data={gridData}
+            key="folder-grid-2col"
+            numColumns={2}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
+            columnWrapperStyle={styles.gridRow}
+            contentContainerStyle={[styles.list, { paddingBottom: 130 + insets.bottom }]}
+            showsVerticalScrollIndicator={false}
+            removeClippedSubviews
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={7}
+            refreshControl={
+              <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
             }
-            warmTone={!isPersonal}
-          >
-            {canEdit && (
-              <Button size="small" onPress={openCreateFolder}>
-                ＋ 첫 폴더 만들기
-              </Button>
-            )}
-          </EmptyState>
-        }
-      />
+            ListEmptyComponent={
+              // 진짜로 폴더가 0개일 때만 (로딩 중엔 위 스켈레톤이 담당)
+              <EmptyState
+                type="folder"
+                title="폴더가 없어요"
+                subtitle={
+                  isPersonal
+                    ? '인스타에서 본 맛집, 유튜브에서 본 카페 —\n폴더를 만들어 링크를 모아보세요'
+                    : '친구와 함께 첫 폴더를 만들어보세요'
+                }
+                warmTone={!isPersonal}
+              >
+                {canEdit && (
+                  <Button size="small" onPress={openCreateFolder}>
+                    ＋ 첫 폴더 만들기
+                  </Button>
+                )}
+              </EmptyState>
+            }
+          />
+        </Animated.View>
+      )}
 
       {/* ── 그룹 시트들 ── */}
       <CreateGroupSheet
@@ -523,6 +554,8 @@ const styles = StyleSheet.create({
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 6 },
   warmMeta: { fontSize: 12, fontFamily: 'LINESeedKR', color: warm.text },
   list: { paddingHorizontal: 22, paddingTop: 14 },
+  gridWrap: { flex: 1 },
+  skelRow: { flexDirection: 'row', gap: 11 },
   gridRow: { gap: 11 },
   folderCard: {
     // width 는 렌더 시 픽셀로 주입 (cardWidth)
