@@ -1,9 +1,10 @@
 import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
+import * as WebBrowser from 'expo-web-browser';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, {
   Extrapolation,
@@ -13,20 +14,19 @@ import Reanimated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
 import { runOnJS } from 'react-native-worklets';
 
 import { colors, glass, shadows } from '../constants/theme';
 import { useDeferredDeletePost } from '../hooks/queries';
 import { getDomainInfo } from '../utils/domainInfo';
-import { selectionTap, warningTap } from '../utils/haptics';
+import { mediumTap, selectionTap, warningTap } from '../utils/haptics';
 import { parseMetadata } from '../utils/parseMetadata';
 import { queryKeys } from '../utils/react-query/queryKeys';
 import { relativeTime } from '../utils/relativeTime';
 
-import AlertDialog from './AlertDialog';
 import { Avatar } from './AvatarStack';
 import FaviconBadge from './FaviconBadge';
+import { TrashIcon } from './icons';
 import Skeleton from './Skeleton';
 
 export type ViewMode = 'large' | 'compact';
@@ -57,55 +57,6 @@ interface LinkPreviewCardProps {
 const RIGHT_ACTION_WIDTH = 80;
 const SELECTION_THRESHOLD = 40;
 const HAPTIC_RESET_THRESHOLD = 10;
-
-const TrashIcon = () => (
-  <Svg
-    width={15}
-    height={15}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={colors.gray[400]}
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <Path d="M3 6h18" />
-    <Path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-    <Path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-  </Svg>
-);
-
-const PenIcon = () => (
-  <Svg
-    width={14}
-    height={14}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={colors.gray[400]}
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <Path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-  </Svg>
-);
-
-const SwipeTrashIcon = () => (
-  <Svg
-    width={22}
-    height={22}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={colors.white}
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <Path d="M3 6h18" />
-    <Path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-    <Path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-  </Svg>
-);
 
 export function LinkPreviewCardSkeleton({ viewMode = 'large' }: { viewMode?: ViewMode }) {
   if (viewMode === 'compact') {
@@ -172,7 +123,7 @@ function RightAction({ translation, onPress }: { translation: SharedValue<number
         accessibilityRole="button"
         accessibilityLabel="링크 삭제"
       >
-        <SwipeTrashIcon />
+        <TrashIcon size={22} color={colors.white} strokeWidth={2} />
         <Text style={swipeStyles.rightActionText}>삭제</Text>
       </TouchableOpacity>
     </Reanimated.View>
@@ -197,7 +148,6 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
   },
   ref,
 ) {
-  const [deleteVisible, setDeleteVisible] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const deferredDelete = useDeferredDeletePost(folderId);
   const swipeableRef = useRef<SwipeableMethods>(null);
@@ -212,17 +162,26 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
     enabled: !!url,
   });
 
-  // 사용자가 노출된 우측 삭제 버튼을 탭했을 때만 다이얼로그를 띄운다.
-  // 스와이프 자체는 더 이상 다이얼로그 트리거가 아니다.
-  const handleActionPress = useCallback(() => {
-    setDeleteVisible(true);
-  }, []);
+  // 스와이프로 노출된 삭제 버튼을 탭하면 즉시 삭제한다. 확인창 대신 6초 실행취소
+  // 토스트(useDeferredDeletePost)가 안전장치 역할을 한다 — 마찰을 줄인 삭제 흐름(2026-07-16).
+  const handleDelete = useCallback(() => {
+    warningTap();
+    deferredDelete.execute(id);
+    swipeableRef.current?.close();
+  }, [deferredDelete, id]);
+
+  // 카드 롱프레스 → 메모 수정(오버레이 버튼을 없앤 대신의 진입점).
+  const handleLongPress = useCallback(() => {
+    if (!onEditPress) return;
+    mediumTap();
+    onEditPress(id, userDescription);
+  }, [onEditPress, id, userDescription]);
 
   const renderRightActions = useCallback(
     (_progress: SharedValue<number>, translation: SharedValue<number>) => (
-      <RightAction translation={translation} onPress={handleActionPress} />
+      <RightAction translation={translation} onPress={handleDelete} />
     ),
-    [handleActionPress],
+    [handleDelete],
   );
 
   // 드래그 시작 시점에 부모(FolderDetailScreen)에 자신의 핸들을 전달한다.
@@ -230,18 +189,6 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
   const handleSwipeStartDrag = useCallback(() => {
     onSwipeStart?.(handle);
   }, [onSwipeStart, handle]);
-
-  // 다이얼로그 취소/확인 후 모두 호출 — 스와이프 카드를 시각적으로 원위치로 돌려둔다.
-  const handleDialogClose = useCallback(() => {
-    setDeleteVisible(false);
-    swipeableRef.current?.close();
-  }, []);
-
-  // 사용자가 '삭제'를 최종 확정한 시점에만 warning 햅틱을 발생시킨다.
-  const handleDialogConfirm = useCallback(() => {
-    warningTap();
-    deferredDelete.execute(id);
-  }, [deferredDelete, id]);
 
   const domain = (() => {
     try {
@@ -258,10 +205,13 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
     viewMode === 'compact' ? (
       <TouchableOpacity
         style={compactStyles.card}
-        onPress={() => Linking.openURL(url)}
+        onPress={() => WebBrowser.openBrowserAsync(url)}
+        onLongPress={canEdit ? handleLongPress : undefined}
+        delayLongPress={280}
         activeOpacity={0.6}
         accessibilityRole="link"
         accessibilityLabel={`${metadata?.title || domain} 링크 열기`}
+        accessibilityHint={canEdit ? '길게 눌러 메모 수정' : undefined}
       >
         {/* Compact Thumbnail */}
         {isLoading ? (
@@ -315,47 +265,17 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
           )}
         </View>
 
-        {/* Action buttons — viewer 는 전부 숨김 */}
-        {canEdit && (
-          <View style={compactStyles.actions}>
-            {onEditPress && (
-              <TouchableOpacity
-                style={compactStyles.actionBtn}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  onEditPress(id, userDescription);
-                }}
-                activeOpacity={0.5}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel="메모 수정"
-              >
-                <PenIcon />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={compactStyles.actionBtn}
-              onPress={(e) => {
-                e.stopPropagation();
-                setDeleteVisible(true);
-              }}
-              activeOpacity={0.5}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="링크 삭제"
-            >
-              <TrashIcon />
-            </TouchableOpacity>
-          </View>
-        )}
       </TouchableOpacity>
     ) : (
       <TouchableOpacity
         style={styles.card}
-        onPress={() => Linking.openURL(url)}
+        onPress={() => WebBrowser.openBrowserAsync(url)}
+        onLongPress={canEdit ? handleLongPress : undefined}
+        delayLongPress={280}
         activeOpacity={0.6}
         accessibilityRole="link"
         accessibilityLabel={`${metadata?.title || domain} 링크 열기`}
+        accessibilityHint={canEdit ? '길게 눌러 메모 수정' : undefined}
       >
         {/* Thumbnail + 도메인 배지 오버레이 (시안 07: INSTAGRAM 스타일) */}
         {isLoading ? (
@@ -433,39 +353,6 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
           )}
         </View>
 
-        {/* Top-right action buttons — viewer 는 전부 숨김 */}
-        {canEdit && (
-          <View style={styles.topActions}>
-            {onEditPress && (
-              <TouchableOpacity
-                style={styles.actionBtnOverlay}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  onEditPress(id, userDescription);
-                }}
-                activeOpacity={0.5}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel="메모 수정"
-              >
-                <PenIcon />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={styles.actionBtnOverlay}
-              onPress={(e) => {
-                e.stopPropagation();
-                setDeleteVisible(true);
-              }}
-              activeOpacity={0.5}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="링크 삭제"
-            >
-              <TrashIcon />
-            </TouchableOpacity>
-          </View>
-        )}
       </TouchableOpacity>
     );
 
@@ -487,16 +374,6 @@ const LinkPreviewCard = forwardRef<LinkPreviewCardHandle, LinkPreviewCardProps>(
       >
         {cardContent}
       </ReanimatedSwipeable>
-
-      <AlertDialog
-        visible={deleteVisible}
-        onClose={handleDialogClose}
-        title="링크를 삭제할까요?"
-        description="삭제된 링크는 복구할 수 없어요"
-        confirmText="삭제"
-        onConfirm={handleDialogConfirm}
-        destructive
-      />
     </>
   );
 });
@@ -572,27 +449,15 @@ const compactStyles = StyleSheet.create({
   },
   domain: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 11.5,
     fontFamily: 'LINESeedKR',
-    color: colors.textDisabled,
+    color: colors.textFaint,
   },
   memo: {
     fontSize: 12,
     color: colors.primary,
     fontFamily: 'LINESeedKR',
     marginTop: 1,
-  },
-  actions: {
-    gap: 6,
-    alignItems: 'center',
-  },
-  actionBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.fieldBg,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
 
@@ -637,9 +502,9 @@ const styles = StyleSheet.create({
     maxWidth: '70%',
   },
   domainBadgeText: {
-    fontSize: 9.5,
+    fontSize: 11,
     fontFamily: 'LINESeedKR-Bold',
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
     color: colors.textMuted,
   },
   thumbnailFallbackTile: {
@@ -721,21 +586,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'LINESeedKR',
     color: colors.textFaint,
-  },
-  topActions: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    flexDirection: 'row',
-    gap: 6,
-  },
-  actionBtnOverlay: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
 
