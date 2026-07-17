@@ -58,25 +58,20 @@ export ANDROID_HOME="$ANDROID_SDK_DIR"
 echo "🤖 Android SDK: $ANDROID_SDK_DIR"
 
 # ── 버전 반영 (app.json · package.json · 프로필 표시) ──────────
+# JSON 전체 재직렬화는 손으로 맞춘 포맷(scheme 배열 등)을 흐트러뜨리므로,
+# 필요한 필드만 외과적으로 치환한다(포맷 보존 → 깔끔한 diff).
 CUR=$(node -p "require('./app.json').expo.version" 2>/dev/null || echo '?')
 echo "🔖 버전: $CUR → $VERSION   (versionCode → $VERSION_CODE)"
-node -e '
-  const fs = require("fs");
-  const v = process.argv[1], vc = Number(process.argv[2]);
-  const app = JSON.parse(fs.readFileSync("app.json", "utf8"));
-  app.expo.version = v;
-  app.expo.android = app.expo.android || {};
-  app.expo.android.versionCode = vc;
-  fs.writeFileSync("app.json", JSON.stringify(app, null, 2) + "\n");
-  const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-  pkg.version = v;
-  fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-  const pf = "src/screens/ProfileScreen.tsx";
-  if (fs.existsSync(pf)) {
-    const s = fs.readFileSync(pf, "utf8").replace(/모아링 v\d+\.\d+\.\d+/g, "모아링 v" + v);
-    fs.writeFileSync(pf, s);
-  }
-' "$VERSION" "$VERSION_CODE"
+perl -0pi -e 's/("version":\s*)"[0-9]+\.[0-9]+\.[0-9]+"/${1}"'"$VERSION"'"/' app.json package.json
+if grep -q '"versionCode"' app.json; then
+  perl -0pi -e 's/("versionCode":\s*)[0-9]+/${1}'"$VERSION_CODE"'/' app.json
+else
+  # android.package 뒤에 versionCode 추가 (6-스페이스 들여쓰기 유지)
+  perl -0pi -e 's/("package":\s*"dev\.inak\.moaring")/$1,\n      "versionCode": '"$VERSION_CODE"'/' app.json
+fi
+if [[ -f src/screens/ProfileScreen.tsx ]]; then
+  perl -0pi -e 's/모아링 v[0-9]+\.[0-9]+\.[0-9]+/모아링 v'"$VERSION"'/g' src/screens/ProfileScreen.tsx
+fi
 
 # ── 네이티브 준비 ──────────────────────────────────────────────
 echo "🏗️  빌드 모드: $MODE"

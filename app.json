@@ -27,7 +27,8 @@
         "monochromeImage": "./assets/adaptive-icon-mono.png"
       },
       "package": "dev.inak.moaring",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "versionCode": 3
     },
     "web": {
       "favicon": "./assets/favicon.png"
