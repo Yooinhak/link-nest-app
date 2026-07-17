@@ -14,9 +14,9 @@
 #      (remote 이름은 아래 DRIVE_REMOTE 와 동일해야 함, 기본 'gdrive')
 #
 # 조절용 환경변수(선택):
-#   DRIVE_REMOTE=gdrive     # rclone remote 이름
-#   DRIVE_DIR="모아링/apk"   # 업로드할 드라이브 폴더(없으면 자동 생성)
-#   DRIVE_LABEL="찌낙이"     # 출력에 표시할 계정 라벨(선택)
+#   DRIVE_REMOTE=gdrive     # rclone remote 이름 (기본 gdrive)
+#   DRIVE_DIR="찌낙이"       # 업로드할 드라이브 폴더 (기본 '찌낙이', 없으면 자동 생성)
+#   DRIVE_LABEL="찌낙이"     # 출력에 표시할 계정 라벨
 #   MODE=clean|prebuild|run # 빌드 모드 (기본 clean)
 # ─────────────────────────────────────────────────────────────
 set -euo pipefail
@@ -34,8 +34,8 @@ fi
 
 MODE="${MODE:-clean}"
 DRIVE_REMOTE="${DRIVE_REMOTE:-gdrive}"
-DRIVE_DIR="${DRIVE_DIR:-모아링/apk}"
-DRIVE_LABEL="${DRIVE_LABEL:-}"
+DRIVE_DIR="${DRIVE_DIR:-찌낙이}"       # 기본: 구글 드라이브의 '찌낙이' 폴더
+DRIVE_LABEL="${DRIVE_LABEL:-찌낙이}"
 APP_NAME="모아링"
 
 # versionCode = MAJOR*10000 + MINOR*100 + PATCH  (0.0.2 → 2, 0.1.0 → 100, 1.0.0 → 10000)
