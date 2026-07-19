@@ -17,6 +17,10 @@
 
 const ENABLE_BY_DEFAULT = false; // Apple Developer 멤버십 가입 후 true 로
 
+// Android release 빌드를 업로드 키로 서명하도록 build.gradle 을 손보는 config plugin.
+// (설정/키가 없으면 플러그인이 알아서 debug 키로 폴백 → 항상 안전하게 켜둬도 됨)
+const withReleaseSigning = require('./plugins/withReleaseSigning');
+
 module.exports = ({ config }) => {
   const enableShareIntent = ENABLE_BY_DEFAULT || process.env.SHARE_INTENT === '1';
 
@@ -36,5 +40,5 @@ module.exports = ({ config }) => {
     ];
   }
 
-  return config;
+  return withReleaseSigning(config);
 };
