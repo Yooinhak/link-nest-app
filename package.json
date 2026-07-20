@@ -1,25 +1,48 @@
 {
-  "name": "link-nest-app",
-  "version": "1.0.0",
+  "name": "moaring-app",
+  "version": "0.0.3",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "ios:release": "bash scripts/build-ios-device.sh",
+    "ios:release:prebuild": "bash scripts/build-ios-device.sh prebuild",
+    "ios:release:clean": "bash scripts/build-ios-device.sh clean",
+    "android:apk": "bash scripts/build-android-apk.sh",
+    "android:apk:prebuild": "bash scripts/build-android-apk.sh prebuild",
+    "android:apk:clean": "bash scripts/build-android-apk.sh clean",
+    "android:aab": "bash scripts/build-android-aab.sh",
+    "android:aab:clean": "bash scripts/build-android-aab.sh clean",
+    "release:android": "bash scripts/release-android.sh",
+    "lint": "eslint 'src/**/*.{ts,tsx}' --max-warnings 0",
+    "lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
+    "format": "prettier --write 'src/**/*.{ts,tsx}'",
+    "format:check": "prettier --check 'src/**/*.{ts,tsx}'",
+    "update-types": "npx supabase gen types typescript --project-id yvhyjxdxksdddunjmjdo --schema public > src/utils/supabase/types.ts"
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "^5.2.8",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/netinfo": "^12.0.1",
     "@react-navigation/bottom-tabs": "^7.15.3",
     "@react-navigation/native": "^7.1.31",
     "@react-navigation/native-stack": "^7.14.2",
+    "@sentry/react-native": "~7.13.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tanstack/react-query": "^5.90.21",
     "expo": "~55.0.4",
+    "expo-apple-authentication": "~8.0.7",
     "expo-auth-session": "^55.0.6",
+    "expo-clipboard": "~55.0.14",
+    "expo-dev-client": "~55.0.36",
+    "expo-font": "~55.0.8",
+    "expo-haptics": "^55.0.9",
     "expo-image": "^55.0.5",
     "expo-linking": "^55.0.7",
+    "expo-share-intent": "^6.0.0",
+    "expo-splash-screen": "~55.0.22",
     "expo-status-bar": "~55.0.4",
     "expo-web-browser": "^55.0.9",
     "nativewind": "^4.2.2",
@@ -31,12 +54,28 @@
     "react-native-screens": "~4.23.0",
     "react-native-svg": "^15.15.3",
     "react-native-url-polyfill": "^3.0.0",
+    "react-native-worklets": "0.7",
     "tailwindcss": "^3.3.2"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
     "@types/react-native": "^0.72.8",
+    "@typescript-eslint/eslint-plugin": "^8.59.0",
+    "@typescript-eslint/parser": "^8.59.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.8.3",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "autolinking": {
+      "exclude": [
+        "expo-apple-authentication"
+      ]
+    }
+  }
 }

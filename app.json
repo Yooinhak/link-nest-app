@@ -1,36 +1,64 @@
 {
   "expo": {
-    "name": "Link Nest",
-    "slug": "link-nest-app",
-    "version": "1.0.0",
+    "name": "모아링",
+    "slug": "moaring-app",
+    "version": "0.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "scheme": "link-nest-app",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#7C3AED"
-    },
+    "scheme": ["moaring"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.linknest.app"
+      "bundleIdentifier": "dev.inak.moaring",
+      "appleTeamId": "ARPM23GNDZ",
+      "icon": {
+        "light": "./assets/icon.png",
+        "dark": "./assets/icon-ios-dark.png",
+        "tinted": "./assets/icon-ios-tinted.png"
+      },
+      "_usesAppleSignIn_TODO": "Apple Developer 멤버십 가입 후 true로 복원",
+      "usesAppleSignIn": false
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#7C3AED",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#6D5EF0",
+        "backgroundImage": "./assets/adaptive-icon-bg.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/adaptive-icon-mono.png"
       },
-      "package": "com.linknest.app",
-      "predictiveBackGestureEnabled": false
+      "package": "dev.inak.moaring",
+      "predictiveBackGestureEnabled": false,
+      "versionCode": 3
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser"
-    ]
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 224,
+          "backgroundColor": "#6D5EF0",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#241F3D"
+          }
+        }
+      ],
+      "expo-web-browser",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "moaring",
+          "project": "moaring-app"
+        }
+      ]
+    ],
+    "_disabled_plugins_TODO": {
+      "_comment": "Apple Developer 멤버십 가입 후 plugins 배열에 복원",
+      "expo-apple-authentication": "Apple Sign In entitlement 필요",
+      "expo-share-intent": "App Groups entitlement + Share Extension 프로비저닝 필요"
+    }
   }
 }

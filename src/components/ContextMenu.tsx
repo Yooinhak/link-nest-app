@@ -1,4 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
+
 import {
   Dimensions,
   Modal,
@@ -23,17 +24,21 @@ interface ContextMenuProps {
   trigger: React.ReactNode;
 }
 
+const MENU_WIDTH = 160;
+
 export default function ContextMenu({ items, trigger }: ContextMenuProps) {
   const [visible, setVisible] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ top: 0, right: 0 });
   const triggerRef = useRef<View>(null);
 
   const handleOpen = useCallback(() => {
     triggerRef.current?.measureInWindow((x, y, width, height) => {
       const { width: screenWidth } = Dimensions.get('window');
+      const triggerRight = screenWidth - (x + width);
+
       setPosition({
-        x: Math.min(x + width, screenWidth - 160),
-        y: y + height + 4,
+        top: y + height + 6,
+        right: Math.max(triggerRight - 4, 12),
       });
       setVisible(true);
     });
@@ -49,6 +54,8 @@ export default function ContextMenu({ items, trigger }: ContextMenuProps) {
         }}
         activeOpacity={0.5}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel="더 보기"
       >
         {trigger}
       </TouchableOpacity>
@@ -61,7 +68,7 @@ export default function ContextMenu({ items, trigger }: ContextMenuProps) {
       >
         <Pressable style={styles.overlay} onPress={() => setVisible(false)}>
           <View
-            style={[styles.menu, { top: position.y, left: position.x - 140 }]}
+            style={[styles.menu, { top: position.top, right: position.right }]}
             onStartShouldSetResponder={() => true}
           >
             {items.map((item, index) => (
@@ -73,6 +80,8 @@ export default function ContextMenu({ items, trigger }: ContextMenuProps) {
                   setTimeout(item.onPress, 200);
                 }}
                 activeOpacity={0.5}
+                accessibilityRole="menuitem"
+                accessibilityLabel={item.label}
               >
                 {item.icon && <View style={styles.menuIcon}>{item.icon}</View>}
                 <Text style={[styles.menuText, item.destructive && styles.destructiveText]}>
@@ -94,32 +103,32 @@ const styles = StyleSheet.create({
   menu: {
     position: 'absolute',
     backgroundColor: colors.white,
-    borderRadius: 16,
-    minWidth: 150,
+    borderRadius: 14,
+    minWidth: MENU_WIDTH,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
     elevation: 12,
     paddingVertical: 4,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   menuItemBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.gray[100],
   },
   menuIcon: {
-    marginRight: 12,
+    marginRight: 10,
   },
   menuText: {
     fontSize: 15,
     color: colors.gray[800],
-    fontWeight: '500',
+    fontFamily: 'LINESeedKR',
   },
   destructiveText: {
     color: colors.destructive,

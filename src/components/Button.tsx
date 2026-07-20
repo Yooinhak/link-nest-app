@@ -1,4 +1,5 @@
 import React from 'react';
+
 import {
   ActivityIndicator,
   StyleSheet,
@@ -7,9 +8,9 @@ import {
   TouchableOpacityProps,
 } from 'react-native';
 
-import { colors } from '../constants/theme';
+import { colors, glass, radius, shadows } from '../constants/theme';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'glass' | 'kakao';
 type ButtonSize = 'large' | 'medium' | 'small';
 
 interface ButtonProps extends TouchableOpacityProps {
@@ -38,20 +39,26 @@ export default function Button({
         {
           backgroundColor: v.bg,
           borderRadius: s.radius,
-          paddingVertical: s.py,
+          height: s.height,
           paddingHorizontal: s.px,
         },
+        v.border && { borderWidth: 1, borderColor: v.border },
+        // 시안: 파란 CTA 는 은은한 글로우 (비활성 시 제거)
+        variant === 'primary' && !disabled && !loading && shadows.primaryGlow,
         (disabled || loading) && { opacity: 0.4 },
         style,
       ]}
       disabled={disabled || loading}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       {...props}
     >
       {loading ? (
         <ActivityIndicator color={v.text} size="small" />
       ) : typeof children === 'string' ? (
-        <Text style={{ color: v.text, fontSize: s.font, fontWeight: '600' }}>{children}</Text>
+        // 버튼 라벨은 전부 600+ → LINE Seed KR Bold 단일 (v3 폰트 규칙)
+        <Text style={{ color: v.text, fontSize: s.font, fontFamily: 'LINESeedKR-Bold' }}>{children}</Text>
       ) : (
         children
       )}
@@ -59,17 +66,25 @@ export default function Button({
   );
 }
 
-const VARIANTS = {
+// 블루 글래스 토큰 (design_handoff/redesign.html)
+// primary: 파랑 + 글로우 · secondary: #F2F4F6 · glass: 유리 표면 (배경 그라디언트 위)
+const VARIANTS: Record<
+  ButtonVariant,
+  { bg: string; text: string; border?: string }
+> = {
   primary: { bg: colors.primary, text: colors.white },
-  secondary: { bg: colors.gray[100], text: colors.gray[800] },
-  ghost: { bg: 'transparent', text: colors.gray[600] },
-  danger: { bg: colors.destructiveLight, text: colors.destructive },
-} as const;
+  secondary: { bg: colors.divider, text: colors.textSub },
+  ghost: { bg: 'transparent', text: colors.textFaint },
+  danger: { bg: colors.danger, text: colors.white },
+  glass: { bg: glass.bg, text: colors.primary, border: glass.border },
+  kakao: { bg: colors.kakao, text: colors.kakaoText },
+};
 
+// large: 화면 최하단 CTA (54/16) · medium: 시트 내 버튼 (52/15) · small: 칩형 (38/13)
 const SIZES = {
-  large: { py: 16, px: 24, font: 16, radius: 16 },
-  medium: { py: 12, px: 20, font: 15, radius: 12 },
-  small: { py: 8, px: 14, font: 13, radius: 10 },
+  large: { height: 54, px: 24, font: 16, radius: 18 },
+  medium: { height: 52, px: 20, font: 15, radius: radius.button },
+  small: { height: 38, px: 14, font: 13, radius: 19 },
 } as const;
 
 const styles = StyleSheet.create({
@@ -77,6 +92,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
   },
 });

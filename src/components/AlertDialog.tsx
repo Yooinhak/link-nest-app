@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { colors } from '../constants/theme';
@@ -26,14 +27,14 @@ export default function AlertDialog({
 }: AlertDialogProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <View style={styles.dialog} onStartShouldSetResponder={() => true}>
+      <Pressable style={styles.overlay} onPress={onClose} accessibilityRole="button" accessibilityLabel="닫기">
+        <View style={styles.dialog} onStartShouldSetResponder={() => true} accessibilityRole="alert">
           <View style={styles.header}>
-            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.title} accessibilityRole="header">{title}</Text>
             {description && <Text style={styles.description}>{description}</Text>}
           </View>
           <View style={styles.footer}>
-            <TouchableOpacity style={[styles.button]} onPress={onClose} activeOpacity={0.6}>
+            <TouchableOpacity style={[styles.button]} onPress={onClose} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel={cancelText}>
               <Text style={styles.cancelText}>{cancelText}</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -43,6 +44,8 @@ export default function AlertDialog({
                 onClose();
               }}
               activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel={confirmText}
             >
               <Text style={[styles.confirmText, destructive && styles.destructiveText]}>
                 {confirmText}
@@ -79,12 +82,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'LINESeedKR-Bold',
     color: colors.gray[900],
     letterSpacing: -0.3,
   },
   description: {
     fontSize: 14,
+    fontFamily: 'LINESeedKR',
     color: colors.gray[500],
     lineHeight: 20,
     textAlign: 'center',
@@ -112,12 +116,12 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 15,
     color: colors.gray[600],
-    fontWeight: '600',
+    fontFamily: 'LINESeedKR-Bold',
   },
   confirmText: {
     fontSize: 15,
     color: colors.white,
-    fontWeight: '600',
+    fontFamily: 'LINESeedKR-Bold',
   },
   destructiveText: {
     color: colors.white,

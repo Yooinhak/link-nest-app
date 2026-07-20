@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🪺 Link Nest
+# 🔗 모아링 (Moaring)
 
-**즐겨찾는 공유 링크를 모두 모아둘 수 있는 아늑한 장소**
+**링크를 모아, 사람을 잇다 — 흩어진 링크를 한 곳에, 친구와 함께 반짝이게**
 
 <br />
 
@@ -17,32 +17,50 @@
 
 ## 📖 소개
 
-**Link Nest**는 웹에서 발견한 유용한 링크를 폴더별로 정리하고, 자동 미리보기로 한눈에 관리할 수 있는 모바일 앱입니다.
+**모아링**은 인스타·유튜브·웹에서 발견한 링크를 폴더로 정리하고, **친구와 그룹으로 함께 모을 수 있는** 링크 아카이빙 앱입니다.
 
-흩어져 있는 북마크, 메신저로 공유받은 링크, 나중에 볼 아티클까지 — Link Nest 하나로 깔끔하게 정리하세요.
+혼자 쓰는 **나의 서랍**에 차곡차곡 모으다가, 여행·맛집·위시리스트 같은 주제는 **공유 그룹**을 만들어 친구를 초대하세요. 누가 어떤 링크를 추가했는지까지 한눈에 보입니다.
 
 <br />
 
 ## ✨ 주요 기능
 
-### 🔐 소셜 로그인
-- Google, Kakao OAuth를 통한 간편 로그인
-- Supabase Auth 기반의 안전한 세션 관리
-
-### 📁 폴더 관리
-- 폴더 생성 / 이름 변경 / 삭제
-- 직관적인 컨텍스트 메뉴로 빠른 조작
-- 폴더별 링크 분류 및 정리
+### 👥 그룹 공유 (핵심 기능)
+- 이모지로 꾸미는 공유 그룹 생성, 상단 채널 레일로 빠른 공간 전환
+- **초대 링크**로 친구 초대 (7일 유효 · 최대 10명 · 딥링크로 즉시 참여)
+- 역할 기반 권한 — `owner` / `편집` / `보기 전용` (viewer에겐 편집 UI 자체가 비노출)
+- 링크마다 "누가 추가했는지" 아바타·상대시간 표시
+- 개인 공간은 라벤더, 공유 그룹은 웜 톤 — **배경색이 지금 어느 공간인지 말해줍니다**
 
 ### 🔗 링크 저장 & 미리보기
-- URL 입력만으로 자동 메타데이터 추출 (제목, 설명, 썸네일)
-- Microlink API를 활용한 고품질 링크 프리뷰
-- 개인 메모 추가 기능
-- 원탭으로 브라우저에서 열기
+- 다른 앱에서 **공유하기 → 모아링**으로 바로 저장 (Android Share Intent)
+- 자동 메타데이터 추출 (제목·설명·썸네일) + 도메인 파비콘 배지
+- 큰 카드 / 컴팩트 리스트 전환, 검색·정렬, 💬 개인 메모
 
-### 👤 프로필 & 설정
-- OAuth 프로필 자동 연동 (아바타, 이름, 이메일)
-- 로그아웃
+### 📁 폴더 관리
+- 그룹별 폴더 그리드, 6색 팔레트, 스와이프 삭제(iOS Mail 패턴)
+- 최근 저장 폴더 기억 — "어디에 저장할까요?" 시트에서 원탭 저장
+
+### 🔐 소셜 로그인
+- Google · Kakao OAuth (Supabase Auth, PKCE)
+- 계정 삭제(2단계 확인) 등 개인정보 보호 대응
+
+<br />
+
+## 🎨 디자인 — "인디고 글래스"
+
+LINE Seed KR 서체 + 소프트 인디고 팔레트 + 프로스트 유리 질감의 커스텀 디자인 시스템.
+
+| 토큰 | 값 | 용도 |
+|------|-----|------|
+| `primary` | `#8B7EF2` | 채워진 버튼, FAB, 활성 탭 |
+| `primaryDeep` | `#6D5EF0` | 텍스트 액센트, 강조 |
+| 개인 공기 | `#E2DDFF →` | 나의 서랍 배경 그라디언트 |
+| 웜 공기 | `#FFE9D6 →` | 공유 그룹 배경 그라디언트 |
+
+- SVG 그라디언트 배경 + 반투명 유리 카드 (추가 의존성 없이 `react-native-svg`로 구현)
+- 플로팅 필 탭바 (홈 · ＋ · 프로필), Android edge-to-edge 완전 대응
+- iOS 18 다크/틴티드 아이콘, Android 13+ 테마 아이콘(모노크롬) 지원
 
 <br />
 
@@ -50,14 +68,14 @@
 
 | 분류 | 기술 |
 |------|------|
-| **Framework** | React Native + Expo SDK 55 |
+| **Framework** | React Native 0.83 (New Architecture) + Expo SDK 55 |
 | **Language** | TypeScript 5.9 |
-| **Navigation** | React Navigation (Bottom Tabs + Native Stack) |
-| **Backend** | Supabase (Auth, PostgreSQL) |
-| **State Management** | TanStack React Query v5 |
-| **Styling** | NativeWind (TailwindCSS) + StyleSheet |
-| **Auth** | Supabase OAuth (Google, Kakao) + expo-web-browser |
-| **Link Preview** | Microlink API + HTML Meta Parser (Fallback) |
+| **Backend** | Supabase — Auth, PostgreSQL(RLS), Edge Functions |
+| **Server State** | TanStack React Query v5 |
+| **Navigation** | React Navigation v7 (커스텀 플로팅 탭바) |
+| **UI/모션** | @gorhom/bottom-sheet 5 · Reanimated 4 · react-native-svg |
+| **Font** | LINE Seed KR (expo-font) |
+| **관측** | Sentry (@sentry/react-native) |
 
 <br />
 
@@ -65,138 +83,79 @@
 
 ```
 src/
-├── components/          # 재사용 UI 컴포넌트
-│   ├── AlertDialog.tsx     # 확인/취소 다이얼로그
-│   ├── BottomSheet.tsx     # 바텀시트 모달
-│   ├── Button.tsx          # 버튼 (primary/secondary/ghost/danger)
-│   ├── ContextMenu.tsx     # 컨텍스트 팝업 메뉴
-│   ├── Input.tsx           # 텍스트 입력 필드
-│   ├── LinkPreviewCard.tsx # 링크 프리뷰 카드
-│   └── Skeleton.tsx        # 로딩 스켈레톤
-│
-├── screens/             # 스크린 (페이지)
-│   ├── LoginScreen.tsx     # 소셜 로그인
-│   ├── HomeScreen.tsx      # 폴더 목록 (메인)
-│   ├── FolderDetailScreen.tsx # 폴더 내 링크 목록
-│   └── ProfileScreen.tsx   # 설정 & 프로필
-│
-├── navigation/          # 네비게이션 설정
-│   ├── RootNavigator.tsx   # 인증 상태 기반 분기
-│   ├── MainStack.tsx       # 메인 스택 (탭 + 상세)
-│   ├── TabNavigator.tsx    # 하단 탭 (홈, 설정)
-│   └── types.ts            # 네비게이션 타입 정의
-│
-├── hooks/               # 커스텀 훅
-│   └── useAuth.ts          # 인증 상태 관리
-│
-├── utils/               # 유틸리티
-│   ├── parseMetadata.ts    # URL 메타데이터 파싱
-│   ├── supabase/           # Supabase 클라이언트 & 타입
-│   └── react-query/        # React Query 설정 & 쿼리 키
-│
-└── constants/           # 상수
-    └── theme.ts            # 컬러 팔레트 & 디자인 토큰
+├── components/           # 공용 UI
+│   ├── GlassBackground.tsx   # 공기 배경 (그라디언트 + 라이트 오브)
+│   ├── GroupRail.tsx         # 채널 레일 (그룹 전환)
+│   ├── BottomSheet.tsx       # gorhom 인라인 시트 래퍼 (키보드/스냅 처리)
+│   ├── LinkPreviewCard.tsx   # 링크 카드 (large/compact)
+│   ├── AvatarStack.tsx · RoleBadge.tsx · MemberRow.tsx
+│   └── sheets/               # CreateGroup · Invite · InviteAccept · SaveLink
+├── screens/              # Login · Home(폴더 그리드) · FolderDetail · MemberManage · Profile
+├── navigation/           # RootNavigator(인증 분기) · MainStack · TabNavigator(플로팅 필)
+├── contexts/             # GroupContext (현재 공간 + 역할)
+├── hooks/
+│   ├── queries/              # useGroups · useFolders · usePosts (React Query)
+│   ├── useInviteDeepLink.ts  # moaring://invite/<token> 수신
+│   └── useShareIntent.ts     # 공유하기로 링크 받기
+├── utils/                # inviteLink · parseMetadata · supabase · haptics ...
+└── constants/theme.ts    # 디자인 토큰 (인디고 글래스)
+
+scripts/                  # 실기기/배포 빌드 스크립트 (아래 참고)
+handoff/                  # 디자인 핸드오프 (아이콘 원본 등)
+research.md               # 아키텍처·의사결정·트러블슈팅 상세 기록 ★
 ```
+
+> 데이터 모델(그룹 > 폴더 > 링크, RLS 정책, 초대 토큰 흐름)과 그동안의 트러블슈팅 기록은 **`research.md`** 에 정리되어 있습니다.
 
 <br />
 
 ## 🚀 시작하기
 
-### 사전 요구사항
-
-- Node.js 18+
-- Expo CLI
-- iOS Simulator 또는 Android Emulator (또는 Expo Go 앱)
-
-### 설치 및 실행
-
 ```bash
-# 저장소 클론
-git clone https://github.com/your-username/link-nest-app.git
-cd link-nest-app
+git clone https://github.com/Yooinhak/moaring-app.git
+cd moaring-app
 
-# 의존성 설치
-npm install
-
-# 개발 서버 시작
-npx expo start
+bun install          # 패키지 매니저: bun
+npx expo start       # 개발 서버
 ```
 
-### 환경 변수 설정
+> ⚠️ **Expo 관련 패키지 추가는 반드시 `npx expo install`** 로 하세요. `bun add`는 SDK 비호환 버전을 조용히 설치하고, autolinking이 해당 모듈을 빌드에서 말없이 제외합니다.
 
-프로젝트 루트에 `.env` 파일을 생성합니다:
+### 환경 변수
 
 ```env
+# .env
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 ### Supabase 설정
 
-1. [Supabase](https://supabase.com)에서 프로젝트 생성
-2. `folders`, `posts` 테이블 생성
-3. Authentication > URL Configuration에 리다이렉트 URL 추가:
-   - `link-nest-app://auth/callback`
-   - `exp://localhost:8081/--/auth/callback` (개발용)
-4. Google, Kakao OAuth Provider 활성화
+1. [Supabase](https://supabase.com) 프로젝트 생성 후 테이블/RLS 구성 (`research.md` §데이터 모델 참고)
+2. Authentication → URL Configuration에 리다이렉트 URL 추가: `moaring://auth/callback`
+3. Google, Kakao OAuth Provider 활성화
 
 <br />
 
-## 🗄 데이터베이스 스키마
+## 📦 빌드 & 배포
 
-```sql
--- 폴더 테이블
-CREATE TABLE folders (
-  id        SERIAL PRIMARY KEY,
-  user_id   UUID REFERENCES auth.users NOT NULL DEFAULT auth.uid(),
-  name      TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
+상황별 원커맨드 스크립트 (`scripts/`):
 
--- 링크(포스트) 테이블
-CREATE TABLE posts (
-  id          SERIAL PRIMARY KEY,
-  user_id     UUID REFERENCES auth.users DEFAULT auth.uid(),
-  folder_id   INTEGER REFERENCES folders(id) ON DELETE CASCADE,
-  url         TEXT NOT NULL,
-  description TEXT,
-  created_at  TIMESTAMPTZ DEFAULT now()
-);
+| 상황 | iOS 실기기 (Release) | Android APK |
+|------|------|------|
+| JS/스타일만 수정 | `bun run ios:release` | `bun run android:apk` |
+| app.json·아이콘·스플래시 수정 | `bun run ios:release:prebuild` | `bun run android:apk:prebuild` |
+| 번들ID·스킴 변경 | `bun run ios:release:clean` | `bun run android:apk:clean` |
 
--- RLS 정책 (Row Level Security)
-ALTER TABLE folders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
+스크립트가 알아서 처리하는 것들:
 
-CREATE POLICY "Users can manage own folders"
-  ON folders FOR ALL USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can manage own posts"
-  ON posts FOR ALL USING (auth.uid() = user_id);
-```
-
-<br />
-
-## 🎨 디자인 시스템
-
-Toss 앱에서 영감을 받은 깔끔하고 미니멀한 디자인을 적용했습니다.
-
-| 토큰 | 값 | 용도 |
-|------|-----|------|
-| `Primary` | `#3182F6` | 주요 액션, 링크, 강조 |
-| `Background` | `#F4F5F7` | 화면 배경 |
-| `Card` | `#FFFFFF` | 카드, 섹션 배경 |
-| `Destructive` | `#F04452` | 삭제, 경고 |
-| `Gray 900` | `#191F28` | 제목 텍스트 |
-| `Gray 500` | `#8B95A1` | 보조 텍스트 |
-
-**컴포넌트 특징:**
-- 라운드 코너 (12~28px) 기반 카드 UI
-- 하단 시트(Bottom Sheet)를 활용한 폼 입력
-- Floating Action Button (FAB)으로 빠른 링크 추가
-- 부드러운 애니메이션과 적절한 터치 피드백
+- iOS: clean 후 `ios.buildReactNativeFromSource` 자동 복구 (프리빌트 RN 코어의 dev 심볼 누락 → "No script URL" 방지)
+- Android: prebuild에 `SHARE_INTENT=1` 상시 포함 (공유하기 인텐트 필터 유지)
+- Sentry 소스맵 업로드 기본 비활성 (`SENTRY_UPLOAD=1`로 활성화)
+- APK 완성 시 경로 출력 + Finder 표시
 
 <br />
 
 ## 📄 라이선스
 
-이 프로젝트는 MIT 라이선스를 따릅니다.
+이 프로젝트는 MIT 라이선스를 따릅니다. 서체는 [LINE Seed KR](https://seed.line.me/index_kr.html) (OFL)을 사용합니다.

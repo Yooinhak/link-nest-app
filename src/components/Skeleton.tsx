@@ -1,11 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, ViewStyle } from 'react-native';
+
+import { Animated, DimensionValue, StyleSheet, ViewStyle } from 'react-native';
 
 import { colors } from '../constants/theme';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 interface SkeletonProps {
-  width?: number | string;
-  height?: number | string;
+  width?: DimensionValue;
+  height?: DimensionValue;
   borderRadius?: number;
   style?: ViewStyle;
 }
@@ -17,8 +19,14 @@ export default function Skeleton({
   style,
 }: SkeletonProps) {
   const opacity = useRef(new Animated.Value(0.3)).current;
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    // 동작 줄이기 설정이 켜져 있으면 시머 대신 정적 톤으로 표시(§1 reduced-motion)
+    if (reduceMotion) {
+      opacity.setValue(0.5);
+      return;
+    }
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, {
@@ -35,15 +43,15 @@ export default function Skeleton({
     );
     animation.start();
     return () => animation.stop();
-  }, [opacity]);
+  }, [opacity, reduceMotion]);
 
   return (
     <Animated.View
       style={[
         styles.skeleton,
         {
-          width: width as any,
-          height: height as any,
+          width,
+          height,
           borderRadius,
           opacity,
         },

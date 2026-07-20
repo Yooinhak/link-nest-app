@@ -1,14 +1,16 @@
-import React from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import React from "react";
 
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
-import { colors } from '../constants/theme';
-import { useAuth } from '../hooks/useAuth';
-import LoginScreen from '../screens/LoginScreen';
-import MainStack from './MainStack';
-import { RootStackParamList } from './types';
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
+import { colors } from "../constants/theme";
+import { useAuth } from "../hooks/useAuth";
+import LoginScreen from "../screens/LoginScreen";
+
+import MainStack from "./MainStack";
+import { RootStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -39,8 +41,8 @@ export default function RootNavigator() {
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: colors.white,
   },
 });
