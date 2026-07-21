@@ -4,7 +4,7 @@ import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 're
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors } from '../constants/theme';
+import { colors, radius } from '../constants/theme';
 import { successTap, warningTap } from '../utils/haptics';
 
 import { CheckIcon, XIcon } from './icons';
@@ -78,9 +78,9 @@ function ToastItem({ toast, onDone }: { toast: ToastMessage; onDone: (id: number
     >
       <View style={[styles.iconWrap, { backgroundColor: isSuccess ? colors.success : colors.destructive }]} importantForAccessibility="no-hide-descendants">
         {isSuccess ? (
-          <CheckIcon size={16} color={colors.white} strokeWidth={2.5} />
+          <CheckIcon size={13} color={colors.white} strokeWidth={3} />
         ) : (
-          <XIcon size={16} color={colors.white} strokeWidth={2.5} />
+          <XIcon size={13} color={colors.white} strokeWidth={3} />
         )}
       </View>
       <Text style={styles.toastText}>{toast.message}</Text>
@@ -133,47 +133,54 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     alignItems: 'center',
-    zIndex: 9999,
+    zIndex: 100,
     gap: 8,
   },
+  // v4: 검정 풀폭 → 인디고 글래스 언어에 맞는 밝은 표면 + 내용 폭.
+  // 풀폭(width:'100%')은 화면 헤더를 통째로 덮어 맥락을 잃게 했다.
+  // 배경은 불투명 흰색 — 반투명이면 자기 그림자가 비쳐 얼룩이 생긴다(theme.ts 유리 표면 규칙).
   toast: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray[900],
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 10,
-    width: '100%',
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    alignSelf: 'center',
+    maxWidth: '100%',
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: 'rgba(139,126,242,0.14)',
+    borderRadius: radius.button,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    gap: 9,
+    // 그림자는 회색 금지 → 인디고 틴트 (theme.ts v3 규칙)
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    elevation: 6,
   },
   iconWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   toastText: {
-    flex: 1,
-    fontSize: 14,
+    flexShrink: 1,
+    fontSize: 13.5,
     fontFamily: 'LINESeedKR-Bold',
-    color: colors.white,
+    color: colors.ink,
     letterSpacing: -0.2,
   },
   actionBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 9,
+    backgroundColor: colors.primaryTint,
   },
   actionText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontFamily: 'LINESeedKR-Bold',
-    color: colors.white,
+    color: colors.primaryDeep,
   },
 });
