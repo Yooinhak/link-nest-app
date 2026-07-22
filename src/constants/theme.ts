@@ -120,7 +120,8 @@ export const warm = {
  * 제약: 모든 무드의 마지막 스톱은 #F6F9FE 수렴 (glass/ink 대비 보장).
  * 색값은 실기기 튜닝 전제의 시작값. 커스텀 무드는 의도적으로 없음 — 확장은 여기에 행 추가.
  */
-export type MoodKey = 'sunset' | 'mint' | 'rose' | 'citrus' | 'dusk';
+export const MOOD_ORDER = ['sunset', 'mint', 'rose', 'citrus', 'dusk'] as const;
+export type MoodKey = (typeof MOOD_ORDER)[number];
 
 export interface Mood {
   key: MoodKey;
@@ -140,62 +141,80 @@ export interface Mood {
   illust: { deep: string; primary: string; pastel: string; tint: string };
 }
 
-export const MOOD_ORDER: readonly MoodKey[] = ['sunset', 'mint', 'rose', 'citrus', 'dusk'];
-
 export const moods: Record<MoodKey, Mood> = {
   // 현 웜 공기 승계 — 레거시 그룹('blue'/null)이 이 무드로 폴백되어 배포 당일 화면 변화 제로
   sunset: {
-    key: 'sunset', label: '노을',
-    stops: ['#FFE9D6', '#F4F0FA', '#F6F9FE'], locations: [0, 0.3, 1],
+    key: 'sunset',
+    label: '노을',
+    stops: ['#FFE9D6', '#F4F0FA', '#F6F9FE'],
+    locations: [0, 0.3, 1],
     orbs: [
       { cx: 350, cy: 50, r: 135, color: '#FF9A3D', opacity: 0.35 },
       { cx: 20, cy: 120, r: 110, color: '#FFC49A', opacity: 0.25 },
     ],
-    accent: '#F97316', metaText: '#A16207', tile: '#FFF3E4',
+    accent: '#F97316',
+    metaText: '#A16207',
+    tile: '#FFF3E4',
     chipWash: ['#FFE3C2', '#FFF3E6'],
     illust: { deep: '#C2410C', primary: '#F97316', pastel: '#FDBA74', tint: '#FFF3E4' },
   },
   mint: {
-    key: 'mint', label: '민트',
-    stops: ['#D9F5EA', '#EDF7F3', '#F6F9FE'], locations: [0, 0.32, 1],
+    key: 'mint',
+    label: '민트',
+    stops: ['#D9F5EA', '#EDF7F3', '#F6F9FE'],
+    locations: [0, 0.32, 1],
     orbs: [
       { cx: 340, cy: 55, r: 135, color: '#34D399', opacity: 0.3 },
       { cx: 30, cy: 110, r: 110, color: '#A7F3D0', opacity: 0.25 },
     ],
-    accent: '#10B981', metaText: '#047857', tile: '#E3F7EF',
+    accent: '#10B981',
+    metaText: '#047857',
+    tile: '#E3F7EF',
     chipWash: ['#D9F5EA', '#F0FBF6'],
     illust: { deep: '#047857', primary: '#10B981', pastel: '#6EE7B7', tint: '#E3F7EF' },
   },
   rose: {
-    key: 'rose', label: '로즈',
-    stops: ['#FFE0EC', '#F8EEF5', '#F6F9FE'], locations: [0, 0.3, 1],
+    key: 'rose',
+    label: '로즈',
+    stops: ['#FFE0EC', '#F8EEF5', '#F6F9FE'],
+    locations: [0, 0.3, 1],
     orbs: [
       { cx: 340, cy: 55, r: 135, color: '#F472B6', opacity: 0.3 },
       { cx: 30, cy: 110, r: 110, color: '#FBCFE3', opacity: 0.28 },
     ],
-    accent: '#EC4899', metaText: '#9D2463', tile: '#FDE7F1',
+    accent: '#EC4899',
+    metaText: '#9D2463',
+    tile: '#FDE7F1',
     chipWash: ['#FFDFEB', '#FFF0F6'],
     illust: { deep: '#BE185D', primary: '#EC4899', pastel: '#F9A8D4', tint: '#FDE7F1' },
   },
   citrus: {
-    key: 'citrus', label: '시트러스',
-    stops: ['#FFF3C9', '#F8F3E7', '#F6F9FE'], locations: [0, 0.3, 1],
+    key: 'citrus',
+    label: '시트러스',
+    stops: ['#FFF3C9', '#F8F3E7', '#F6F9FE'],
+    locations: [0, 0.3, 1],
     orbs: [
       { cx: 340, cy: 55, r: 135, color: '#FBBF24', opacity: 0.32 },
       { cx: 30, cy: 110, r: 110, color: '#FDE68A', opacity: 0.26 },
     ],
-    accent: '#F59E0B', metaText: '#854F0B', tile: '#FEF3D7',
+    accent: '#F59E0B',
+    metaText: '#854F0B',
+    tile: '#FEF3D7',
     chipWash: ['#FFF0C2', '#FFF9E5'],
     illust: { deep: '#B45309', primary: '#F59E0B', pastel: '#FCD34D', tint: '#FEF3D7' },
   },
   dusk: {
-    key: 'dusk', label: '저녁',
-    stops: ['#D8E2FF', '#EAEDFB', '#F6F9FE'], locations: [0, 0.3, 1],
+    key: 'dusk',
+    label: '저녁',
+    stops: ['#D8E2FF', '#EAEDFB', '#F6F9FE'],
+    locations: [0, 0.3, 1],
     orbs: [
       { cx: 340, cy: 55, r: 135, color: '#818CF8', opacity: 0.34 },
       { cx: 30, cy: 110, r: 110, color: '#C7D2FE', opacity: 0.26 },
     ],
-    accent: '#6366F1', metaText: '#4338CA', tile: '#E4E9FF',
+    accent: '#6366F1',
+    metaText: '#4338CA',
+    tile: '#E4E9FF',
     chipWash: ['#D8E2FF', '#EEF1FF'],
     illust: { deep: '#4338CA', primary: '#6366F1', pastel: '#A5B4FC', tint: '#E4E9FF' },
   },
@@ -203,7 +222,7 @@ export const moods: Record<MoodKey, Mood> = {
 
 /** groups.color → 무드 키. 미지값·레거시 'blue'·null 은 전부 sunset 폴백 (이관 전략). */
 export function resolveMoodKey(color: string | null | undefined): MoodKey {
-  return color && color in moods ? (color as MoodKey) : 'sunset';
+  return color && (MOOD_ORDER as readonly string[]).includes(color) ? (color as MoodKey) : 'sunset';
 }
 
 export const folderColors = [
