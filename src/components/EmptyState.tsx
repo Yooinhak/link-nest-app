@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
-import { colors, warm } from '../constants/theme';
+import { colors, MoodKey, moods } from '../constants/theme';
 
 /**
  * 빈 상태 — "빛 오브 스파클": 비어 있어도 반짝이는 자리.
@@ -19,15 +19,15 @@ import { colors, warm } from '../constants/theme';
  *  - 유리 타일은 제거: 일러스트가 자체 글로우를 품고 있어 타일(유리) 위에 올리면
  *    유리-위-유리로 글로우가 죽는다(실측 렌더 확인). 공기 배경 위 직접 배치.
  *
- * warmTone=true 면 공유 그룹의 웜 공기에 맞춰 전체 팔레트가 웜으로 치환된다.
+ * mood 를 주면 그 그룹의 무드 공기에 맞춰 전체 팔레트가 치환된다 (없으면 인디고 = 개인 공간).
  */
 
 interface EmptyStateProps {
   type: 'folder' | 'link' | 'search';
   title: string;
   subtitle: string;
-  /** 공유 그룹(웜 공기) 화면이면 true */
-  warmTone?: boolean;
+  /** 공유 그룹이면 그 그룹의 무드 키 (개인 공간은 생략 → 인디고) */
+  mood?: MoodKey;
   /** CTA 버튼 등 하단 액션 (선택) */
   children?: React.ReactNode;
 }
@@ -47,14 +47,6 @@ const INDIGO: Palette = {
   primary: colors.primary, // #8B7EF2
   pastel: '#C4BCFA',
   tint: colors.primaryTint, // #EFECFF
-};
-
-const WARM: Palette = {
-  key: 'w',
-  deep: '#C2410C',
-  primary: warm.accent, // #F97316
-  pastel: '#FDBA74',
-  tint: warm.tile, // #FFF3E4
 };
 
 /** 4포인트 다이아 스파클 (볼록) — 성좌의 기본 별 */
@@ -195,10 +187,11 @@ const ILLUST: Record<EmptyStateProps['type'], (props: { p: Palette }) => React.J
   search: SearchIllust,
 };
 
-export default function EmptyState({ type, title, subtitle, warmTone = false, children }: EmptyStateProps) {
-  const palette = warmTone ? WARM : INDIGO;
+export default function EmptyState({ type, title, subtitle, mood, children }: EmptyStateProps) {
+  // key 는 SVG def id 접두사 — 무드마다 달라야 같은 화면에 두 팔레트가 섞여도 안 겹친다
+  const palette: Palette = mood ? { key: mood, ...moods[mood].illust } : INDIGO;
   const Illust = ILLUST[type];
-  const subColor = warmTone ? '#8B7355' : colors.textFaint;
+  const subColor = mood ? moods[mood].metaText : colors.textFaint;
 
   return (
     <View style={styles.container}>

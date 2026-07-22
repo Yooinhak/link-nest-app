@@ -15,7 +15,7 @@ import Input from '../components/Input';
 import MemberRow from '../components/MemberRow';
 import InviteSheet from '../components/sheets/InviteSheet';
 import { useToast } from '../components/Toast';
-import { colors, getGroupColor, glass, shadows, typo, warm } from '../constants/theme';
+import { colors, getGroupColor, glass, moods, shadows, typo } from '../constants/theme';
 import { useGroup } from '../contexts/GroupContext';
 import {
   useActiveInviteQuery,
@@ -26,6 +26,7 @@ import {
   useKickMember,
   useLeaveGroup,
 } from '../hooks/queries/useGroups';
+import { useCurrentMood } from '../hooks/useCurrentMood';
 import { MainStackParamList } from '../navigation/types';
 import { copyToClipboard, isClipboardAvailable } from '../utils/clipboard';
 import { lightTap } from '../utils/haptics';
@@ -44,6 +45,8 @@ type Nav = NativeStackNavigationProp<MainStackParamList, 'MemberManage'>;
 const DELETE_CONFIRMATION_TEXT = '삭제';
 
 export default function MemberManageScreen() {
+  // 이 화면은 항상 공유 그룹에서만 진입한다 (개인 공간엔 그룹 관리가 없음) → sunset 폴백은 방어용
+  const mood = useCurrentMood() ?? moods.sunset;
   const route = useRoute<MemberManageRouteProp>();
   const navigation = useNavigation<Nav>();
   const { groupId } = route.params;
@@ -111,7 +114,7 @@ export default function MemberManageScreen() {
 
   return (
     <View style={styles.container}>
-      <GlassBackground variant="group" />
+      <GlassBackground mood={mood.key} />
 
       {/* ── 커스텀 헤더 ── */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
@@ -135,7 +138,7 @@ export default function MemberManageScreen() {
       >
         {/* 그룹 카드 */}
         <View style={styles.groupCard}>
-          <View style={[styles.groupTile, group && { backgroundColor: getGroupColor(group.id).bg }]}>
+          <View style={[styles.groupTile, { backgroundColor: group ? getGroupColor(group.id).bg : mood.tile }]}>
             <Text style={styles.groupEmoji}>{group?.emoji ?? '📁'}</Text>
           </View>
           <View style={styles.groupInfo}>
@@ -163,7 +166,7 @@ export default function MemberManageScreen() {
         </View>
 
         {/* 멤버 리스트 */}
-        <Text style={styles.capsLabel}>{`MEMBERS · ${members.length}`}</Text>
+        <Text style={[styles.capsLabel, { color: mood.metaText }]}>{`MEMBERS · ${members.length}`}</Text>
         <View style={styles.card}>
           {members.map((m, i) => (
             <View key={m.userId}>
@@ -350,11 +353,11 @@ const styles = StyleSheet.create({
     padding: 13,
     ...shadows.warmCard,
   },
+  // backgroundColor 는 사용처에서 주입 (그룹 색 → 없으면 현재 무드 타일)
   groupTile: {
     width: 42,
     height: 42,
     borderRadius: 13,
-    backgroundColor: warm.tile,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -385,9 +388,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   copyText: { fontSize: 13, fontFamily: 'LINESeedKR-Bold', color: colors.white },
+  // color 는 사용처에서 현재 무드로 인라인 주입 (StyleSheet 안에서는 훅을 쓸 수 없음)
   capsLabel: {
     ...typo.sectionLabel,
-    color: warm.text,
     marginTop: 18,
     marginBottom: 9,
     marginLeft: 2,

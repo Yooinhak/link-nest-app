@@ -88,17 +88,13 @@ export const glass = {
 
 /**
  * 공기(배경) 그라디언트 — GlassBackground 에서 사용.
- * personal = 블루 공기 · group = 웜 공기 · login = 딥 블루 공기.
+ * personal = 라벤더 공기 · login = 딥 블루 공기.
+ * 공유 그룹의 공기는 moods 가 담당한다 ('group' variant 는 sunset 으로 하위 호환 처리).
  */
 export const air = {
-  // v3 (Linkle 2a 파이널): personal = 라벤더 공기, group = 웜 공기 유지
   personal: {
     stops: ['#E2DDFF', '#F0EDFC', '#F6F9FE'],
     locations: [0, 0.34, 1],
-  },
-  group: {
-    stops: ['#FFE9D6', '#F4F0FA', '#F6F9FE'],
-    locations: [0, 0.3, 1],
   },
   login: {
     stops: ['#D6CEFF', '#EBE6FC', '#F6F9FE'],
@@ -106,14 +102,8 @@ export const air = {
   },
 } as const;
 
-export type AirVariant = keyof typeof air;
-
-/** 웜(그룹) 공기 전용 보조 텍스트 색 — 시안 06 */
-export const warm = {
-  text: '#A16207', // 웜 배경 위 메타 텍스트
-  accent: '#F97316', // 웜 포인트 (새 폴더 대시 보더 등)
-  tile: '#FFF3E4', // 웜 아이콘 타일 배경
-} as const;
+/** 'group' 은 air 에 항목이 없는 레거시 별칭 — GlassBackground 가 moods.sunset 으로 해석한다. */
+export type AirVariant = 'personal' | 'group' | 'login';
 
 /**
  * 무드(공기) 토큰 — 그룹 아이덴티티 = 무드 1개 (설계: group-mood-air.design.md).
@@ -244,6 +234,8 @@ export function getFolderColor(key?: string | null) {
  * 그룹 id → 안정적인 팔레트 색. 그룹은 색 속성이 없어 레일/타일에서 이모지에만
  * 의존해 구분됐는데(모델 비대칭), id 해시로 일관된 색을 부여해 식별성을 높인다.
  * (스키마 변경 없이 클라이언트에서 결정적으로 계산)
+ *
+ * @deprecated 무드 체계로 대체됨(group-mood-air). 롤백 안전판으로 보존.
  */
 export function getGroupColor(id: string) {
   let h = 0;

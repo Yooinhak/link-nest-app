@@ -32,6 +32,8 @@ export interface InvitePreview {
   valid: boolean;
   group_name?: string;
   group_emoji?: string | null;
+  /** 그룹 무드 키 (preview_invite 가 아직 안 내려주면 undefined → sunset 폴백) */
+  group_color?: string | null;
   role?: GroupRole;
   member_count?: number;
 }

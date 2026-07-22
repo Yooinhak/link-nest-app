@@ -12,7 +12,7 @@ import EmptyState from '../components/EmptyState';
 import FaviconBadge from '../components/FaviconBadge';
 import GlassBackground from '../components/GlassBackground';
 import Skeleton from '../components/Skeleton';
-import { colors, glass, warm } from '../constants/theme';
+import { colors, glass, moods } from '../constants/theme';
 import { useGroup } from '../contexts/GroupContext';
 import { type ActivityFeedItem, useActivityFeedQuery } from '../hooks/queries';
 import { useActivityUnread } from '../hooks/useActivityUnread';
@@ -183,12 +183,7 @@ export default function ActivityScreen() {
               ))}
             </View>
           ) : (
-            <EmptyState
-              type="link"
-              title="아직 새 소식이 없어요"
-              subtitle={'친구가 링크를 담으면\n여기에 모여요'}
-              warmTone
-            />
+            <EmptyState type="link" title="아직 새 소식이 없어요" subtitle={'친구가 링크를 담으면\n여기에 모여요'} />
           )
         }
       />
@@ -213,7 +208,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'LINESeedKR-Bold',
     letterSpacing: 0.6,
-    color: warm.text,
+    // 전 그룹 통합 피드 — 특정 그룹 무드가 없어 중립 웜(sunset) 유지
+    color: moods.sunset.metaText,
     marginTop: 16,
     marginBottom: 2,
   },

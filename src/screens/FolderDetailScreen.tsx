@@ -39,10 +39,11 @@ import LinkPreviewCard, {
   ViewMode,
 } from '../components/LinkPreviewCard';
 import { useToast } from '../components/Toast';
-import { colors, glass, shadows, warm } from '../constants/theme';
+import { colors, glass, shadows } from '../constants/theme';
 import { useGroup } from '../contexts/GroupContext';
 import { useCreatePost, useGroupMembersQuery, usePostsQuery, useUpdatePost } from '../hooks/queries';
 import { useAuth } from '../hooks/useAuth';
+import { useCurrentMood } from '../hooks/useCurrentMood';
 import { MainStackParamList } from '../navigation/types';
 import { mediumTap } from '../utils/haptics';
 import { isValidUrl } from '../utils/validateUrl';
@@ -66,6 +67,7 @@ const SORT_ORDER_KEY = 'moaring.folderSortOrder';
  * 네이티브 스택 헤더는 끔 (MainStack headerShown: false) — 공기 배경 위에 직접 그린다.
  */
 export default function FolderDetailScreen() {
+  const mood = useCurrentMood();
   const route = useRoute<FolderDetailRouteProp>();
   const navigation = useNavigation<Nav>();
   const { folderId, folderName, folderEmoji } = route.params;
@@ -247,7 +249,7 @@ export default function FolderDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <GlassBackground variant={isPersonal ? 'personal' : 'group'} />
+      <GlassBackground variant="personal" mood={mood?.key} />
 
       {/* ── 커스텀 헤더: 유리 백 버튼 + 타이틀/브레드크럼 + 아바타 ── */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
@@ -268,7 +270,7 @@ export default function FolderDetailScreen() {
                 {folderName || '폴더'}
               </Text>
             </View>
-            <Text style={[styles.headerCrumb, !isPersonal && { color: warm.text }]} numberOfLines={1}>
+            <Text style={[styles.headerCrumb, { color: mood?.metaText ?? colors.textFaint }]} numberOfLines={1}>
               {crumb}
             </Text>
           </View>
@@ -378,7 +380,7 @@ export default function FolderDetailScreen() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
           ListEmptyComponent={
             searchQuery ? (
-              <EmptyState type="search" title="검색 결과가 없어요" subtitle="다른 키워드로 검색해보세요" warmTone={!isPersonal} />
+              <EmptyState type="search" title="검색 결과가 없어요" subtitle="다른 키워드로 검색해보세요" mood={mood?.key} />
             ) : (
               <EmptyState
                 type="link"
@@ -388,7 +390,7 @@ export default function FolderDetailScreen() {
                     ? '인스타에서 본 맛집, 유튜브에서 본 카페 —\n첫 링크를 함께 모아보세요'
                     : '아래 ＋ 버튼으로 첫 링크를 저장해보세요'
                 }
-                warmTone={!isPersonal}
+                mood={mood?.key}
               >
                 {canEdit && (
                   <Button

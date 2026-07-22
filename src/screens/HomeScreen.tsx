@@ -26,7 +26,7 @@ import InviteSheet from '../components/sheets/InviteSheet';
 import SaveLinkSheet from '../components/sheets/SaveLinkSheet';
 import { useToast } from '../components/Toast';
 import { suggestIdentity } from '../constants/emojiData';
-import { colors, FolderColorKey, getFolderColor, glass, shadows, typo, warm } from '../constants/theme';
+import { colors, FolderColorKey, getFolderColor, glass, shadows, typo } from '../constants/theme';
 import { useGroup } from '../contexts/GroupContext';
 import {
   useCreateFolder,
@@ -36,6 +36,7 @@ import {
   useUpdateFolder,
 } from '../hooks/queries';
 import { useActivityUnread } from '../hooks/useActivityUnread';
+import { useCurrentMood } from '../hooks/useCurrentMood';
 import { useInviteDeepLink } from '../hooks/useInviteDeepLink';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 import { useShareIntent } from '../hooks/useShareIntent';
@@ -133,6 +134,7 @@ const GRID_H_PADDING = 22;
 const GRID_GAP = 11;
 
 export default function HomeScreen() {
+  const mood = useCurrentMood();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const { showToast } = useToast();
@@ -315,9 +317,9 @@ export default function HomeScreen() {
             accessibilityLabel="새 폴더 만들기"
           >
             <View style={styles.addTileCircle}>
-              <PlusIcon size={15} color={isPersonal ? colors.primary : warm.accent} strokeWidth={2.4} />
+              <PlusIcon size={15} color={mood?.accent ?? colors.primary} strokeWidth={2.4} />
             </View>
-            <Text style={[styles.addTileText, !isPersonal && { color: warm.text }]}>새 폴더</Text>
+            <Text style={[styles.addTileText, { color: mood?.metaText ?? colors.textMuted }]}>새 폴더</Text>
           </TouchableOpacity>
         );
       }
@@ -334,7 +336,7 @@ export default function HomeScreen() {
         />
       );
     },
-    [canEdit, isPersonal, cardWidth, openCreateFolder, handleOpenFolder, handleEditFolder, handleDeleteFolder],
+    [canEdit, isPersonal, mood, cardWidth, openCreateFolder, handleOpenFolder, handleEditFolder, handleDeleteFolder],
   );
 
   const keyExtractor = useCallback((item: GridItem) => (item.kind === 'add' ? 'add-tile' : String(item.folder.id)), []);
@@ -345,8 +347,8 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* 공기 배경 — 개인 = 블루, 공유 그룹 = 웜 */}
-      <GlassBackground variant={isPersonal ? 'personal' : 'group'} />
+      {/* 공기 배경 — 개인 = 라벤더, 공유 그룹 = 그 그룹의 무드 */}
+      <GlassBackground variant="personal" mood={mood?.key} />
 
       <View style={{ paddingTop: insets.top + 10 }}>
         {/* ── 채널 레일: 그룹 전환 (전역 '활동'은 하단 탭으로 이동) ── */}
@@ -369,7 +371,9 @@ export default function HomeScreen() {
                 accessibilityLabel="그룹 관리"
               >
                 {members.length > 0 && <AvatarStack members={members} size={22} />}
-                <Text style={styles.warmMeta}>{`멤버 ${members.length}명 · ${totalLinks}개의 링크`}</Text>
+                <Text
+                  style={[styles.warmMeta, { color: mood?.metaText ?? colors.textMuted }]}
+                >{`멤버 ${members.length}명 · ${totalLinks}개의 링크`}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -423,7 +427,7 @@ export default function HomeScreen() {
                     ? '인스타에서 본 맛집, 유튜브에서 본 카페 —\n폴더를 만들어 링크를 모아보세요'
                     : '친구와 함께 첫 폴더를 만들어보세요'
                 }
-                warmTone={!isPersonal}
+                mood={mood?.key}
               >
                 {canEdit && (
                   <Button size="small" onPress={openCreateFolder}>
@@ -552,7 +556,8 @@ const styles = StyleSheet.create({
   },
   subMeta: { fontSize: 13, fontFamily: 'LINESeedKR', color: '#6A6488', marginTop: 4 }, // 라벤더 공기 위 메타 (v3)
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 6 },
-  warmMeta: { fontSize: 12, fontFamily: 'LINESeedKR', color: warm.text },
+  // color 는 사용처에서 현재 무드로 인라인 주입 (StyleSheet 안에서는 훅을 쓸 수 없음)
+  warmMeta: { fontSize: 12, fontFamily: 'LINESeedKR' },
   list: { paddingHorizontal: 22, paddingTop: 14 },
   gridWrap: { flex: 1 },
   skelRow: { flexDirection: 'row', gap: 11 },

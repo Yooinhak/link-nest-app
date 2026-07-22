@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 
 import { Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { colors, typo, warm } from '../../constants/theme';
+import { colors, moods, typo } from '../../constants/theme';
 import { useGroup } from '../../contexts/GroupContext';
 import { GroupRole, useActiveInviteQuery, useCreateInvite } from '../../hooks/queries/useGroups';
+import { useCurrentMood } from '../../hooks/useCurrentMood';
 import { copyToClipboard, isClipboardAvailable } from '../../utils/clipboard';
 import { lightTap } from '../../utils/haptics';
 import { buildInviteMessage, buildInviteUrl } from '../../utils/inviteLink';
@@ -33,6 +34,8 @@ const ROLE_OPTIONS: { key: InviteRole; label: string; desc: string }[] = [
 ];
 
 export default function InviteSheet({ visible, onClose, groupId, groupName }: InviteSheetProps) {
+  // 초대는 공유 그룹에서만 열린다 (생성 직후에는 아직 현재 그룹이 아닐 수 있어 sunset 폴백)
+  const mood = useCurrentMood() ?? moods.sunset;
   const { showToast } = useToast();
   const { groups } = useGroup();
   const [role, setRole] = useState<InviteRole>('editor');
@@ -76,7 +79,7 @@ export default function InviteSheet({ visible, onClose, groupId, groupName }: In
     <BottomSheet visible={visible} onClose={onClose}>
       {/* 헤더: 이모지 타일 + 타이틀 (시안 04) */}
       <View style={styles.headerRow}>
-        <View style={styles.emojiTile}>
+        <View style={[styles.emojiTile, { backgroundColor: mood.tile, shadowColor: mood.accent }]}>
           <Text style={styles.emojiText}>{groupEmoji}</Text>
         </View>
         <View style={styles.headerText}>
@@ -150,14 +153,13 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingTop: 4,
   },
+  // backgroundColor/shadowColor 는 사용처에서 현재 무드로 인라인 주입
   emojiTile: {
     width: 50,
     height: 50,
     borderRadius: 16,
-    backgroundColor: warm.tile,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: warm.accent,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.18,
     shadowRadius: 14,
