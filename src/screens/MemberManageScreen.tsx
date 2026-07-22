@@ -13,9 +13,10 @@ import GlassBackground from '../components/GlassBackground';
 import { ChevronLeftIcon, PlusIcon, TrashIcon } from '../components/icons';
 import Input from '../components/Input';
 import MemberRow from '../components/MemberRow';
+import MoodSwatchRow from '../components/MoodSwatchRow';
 import InviteSheet from '../components/sheets/InviteSheet';
 import { useToast } from '../components/Toast';
-import { colors, getGroupColor, glass, moods, shadows, typo } from '../constants/theme';
+import { colors, getGroupColor, glass, moods, resolveMoodKey, shadows, typo } from '../constants/theme';
 import { useGroup } from '../contexts/GroupContext';
 import {
   useActiveInviteQuery,
@@ -25,6 +26,7 @@ import {
   useGroupMembersQuery,
   useKickMember,
   useLeaveGroup,
+  useUpdateGroup,
 } from '../hooks/queries/useGroups';
 import { useCurrentMood } from '../hooks/useCurrentMood';
 import { MainStackParamList } from '../navigation/types';
@@ -63,6 +65,7 @@ export default function MemberManageScreen() {
   const createInvite = useCreateInvite(groupId);
   const deleteGroup = useDeleteGroup();
   const leaveGroup = useLeaveGroup();
+  const updateGroup = useUpdateGroup();
 
   // 시안 08: 활성 초대 링크 박스 + 복사
   const { data: activeInvite } = useActiveInviteQuery(groupId);
@@ -164,6 +167,17 @@ export default function MemberManageScreen() {
             <Text style={styles.copyText}>{inviteUrl ? '복사' : '발급'}</Text>
           </TouchableOpacity>
         </View>
+
+        {/* 공기(무드) 변경 — owner 전용. 저장하면 GROUP_LIST 무효화 → 레일 칩·배경이 따라 바뀐다 */}
+        {isOwner && (
+          <View style={styles.moodSection}>
+            <Text style={[styles.capsLabel, styles.moodLabel, { color: mood.metaText }]}>공기</Text>
+            <MoodSwatchRow
+              value={resolveMoodKey(group?.color)}
+              onChange={(key) => updateGroup.mutate({ id: groupId, color: key })}
+            />
+          </View>
+        )}
 
         {/* 멤버 리스트 */}
         <Text style={[styles.capsLabel, { color: mood.metaText }]}>{`MEMBERS · ${members.length}`}</Text>
@@ -395,6 +409,9 @@ const styles = StyleSheet.create({
     marginBottom: 9,
     marginLeft: 2,
   },
+  moodSection: { marginTop: 24, gap: 11 },
+  // capsLabel 의 세로 여백은 moodSection 의 marginTop/gap 이 대신한다 (이중 여백 방지)
+  moodLabel: { marginTop: 0, marginBottom: 0 },
   card: {
     backgroundColor: glass.bg,
     borderWidth: 1,
