@@ -94,6 +94,8 @@ function GlassBackground({ variant = 'personal', mood }: GlassBackgroundProps) {
   if (cfg.key !== curr.key) {
     setPrev(curr);
     setCurr(cfg);
+    // ⚠️ 렌더 중 외부 뮤테이션 — 커밋되지 않는 렌더에서도 실행된다.
+    // mood 를 startTransition/useDeferredValue 로 전달하지 말 것 (버려진 렌더가 fade=0 을 남겨 배경이 투명해질 수 있음).
     fade.setValue(0);
   }
 
@@ -104,6 +106,8 @@ function GlassBackground({ variant = 'personal', mood }: GlassBackgroundProps) {
       if (finished) setPrev(null);
     });
     return () => anim.stop();
+    // deps 는 의도적으로 curr.key 만 — prev 는 항상 같은 렌더에서 함께 세팅되어 stale 하지 않고,
+    // prev 를 넣으면 애니메이션 종료(setPrev(null))마다 무의미한 cleanup/재실행이 돈다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [curr.key]);
 
