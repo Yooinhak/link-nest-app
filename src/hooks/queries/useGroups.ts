@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { StackAvatar } from '../../components/AvatarStack';
 import { useToast } from '../../components/Toast';
 import { queryKeys } from '../../utils/react-query/queryKeys';
 import { supabase } from '../../utils/supabase/client';
@@ -117,6 +118,55 @@ export function useGroupMembersQuery(groupId: string | null) {
           avatarUrl: profileMap.get(m.user_id)?.avatar_url ?? null,
         }))
         .sort((a, b) => (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9) || a.joinedAt.localeCompare(b.joinedAt));
+    },
+  });
+}
+
+export interface GroupMembersPreview {
+  count: number;
+  /** 합류순 최대 3명 (레일은 2+N 로 자름) */
+  members: StackAvatar[];
+}
+
+/** 레일 칩 마이크로 아바타용 — 내 공유 그룹 전체의 멤버 프리뷰를 한 번에. */
+export function useGroupMembersPreviewQuery(groupIds: string[]) {
+  const key = [...groupIds].sort().join(',');
+  return useQuery({
+    queryKey: [queryKeys.GROUP_MEMBERS_PREVIEW, key],
+    enabled: groupIds.length > 0,
+    staleTime: 60_000,
+    queryFn: async (): Promise<Record<string, GroupMembersPreview>> => {
+      const { data: rows, error } = await supabase
+        .from('group_members')
+        .select('group_id, user_id, joined_at')
+        .in('group_id', groupIds)
+        .order('joined_at', { ascending: true });
+      if (error) throw error;
+
+      const ids = [...new Set((rows ?? []).map((r) => r.user_id))];
+      const profileMap = new Map<string, { display_name: string | null; avatar_url: string | null }>();
+      if (ids.length > 0) {
+        const { data: profiles, error: pErr } = await supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url')
+          .in('id', ids);
+        if (pErr) throw pErr;
+        for (const p of profiles ?? []) profileMap.set(p.id, p);
+      }
+
+      const out: Record<string, GroupMembersPreview> = {};
+      for (const r of rows ?? []) {
+        const entry = (out[r.group_id] ??= { count: 0, members: [] });
+        entry.count += 1;
+        if (entry.members.length < 3) {
+          entry.members.push({
+            userId: r.user_id,
+            displayName: profileMap.get(r.user_id)?.display_name ?? null,
+            avatarUrl: profileMap.get(r.user_id)?.avatar_url ?? null,
+          });
+        }
+      }
+      return out;
     },
   });
 }
