@@ -309,7 +309,8 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={[
               styles.addTile,
-              { width: cardWidth, borderColor: isPersonal ? 'rgba(139,126,242,0.45)' : 'rgba(249,115,22,0.4)' },
+              // 대시 보더도 무드를 따른다 (66 = 40% 알파) — 안 그러면 민트/로즈 그룹에서 보더만 주황으로 남는다
+              { width: cardWidth, borderColor: `${mood?.accent ?? colors.primary}66` },
             ]}
             onPress={openCreateFolder}
             activeOpacity={0.65}
