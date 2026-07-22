@@ -133,7 +133,6 @@ export type Database = {
           color: string | null
           created_at: string
           created_by: string
-          emoji: string | null
           id: string
           name: string
           type: string
@@ -142,7 +141,6 @@ export type Database = {
           color?: string | null
           created_at?: string
           created_by: string
-          emoji?: string | null
           id?: string
           name: string
           type?: string
@@ -151,7 +149,6 @@ export type Database = {
           color?: string | null
           created_at?: string
           created_by?: string
-          emoji?: string | null
           id?: string
           name?: string
           type?: string
