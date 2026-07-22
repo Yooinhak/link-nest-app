@@ -59,6 +59,12 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
     touchedRef.current = false;
   };
 
+  // 닫을 때도 초기화한다 — 안 그러면 touchedRef 가 true 로 남아 다음 세션의 자동 추천이 죽는다.
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
   const handlePickMood = (key: MoodKey) => {
     touchedRef.current = true;
     setSuggested(null);
@@ -90,7 +96,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
   return (
     <BottomSheet
       visible={visible}
-      onClose={onClose}
+      onClose={handleClose}
       title="새 그룹 만들기"
       description="친구와 함께 링크를 모을 공간이에요"
     >
@@ -117,7 +123,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
       </View>
 
       <View style={styles.btns}>
-        <Button variant="secondary" onPress={onClose} style={{ flex: 1 }}>
+        <Button variant="secondary" onPress={handleClose} style={{ flex: 1 }}>
           닫기
         </Button>
         <Button onPress={handleCreate} loading={createGroup.isPending} style={{ flex: 1.4 }}>
