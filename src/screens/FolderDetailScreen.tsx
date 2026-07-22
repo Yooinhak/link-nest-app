@@ -243,9 +243,10 @@ export default function FolderDetailScreen() {
   const ItemSeparator = useCallback(() => <View style={{ height: viewMode === 'compact' ? 8 : 11 }} />, [viewMode]);
 
   const count = postList?.length ?? 0;
+  // 크롬에서 이모지 폐지 — 공간 구분은 배경 공기와 무드색이 담당한다
   const crumb = isPersonal
-    ? `🏠 나의 서랍 · ${count}개의 링크`
-    : `${currentGroup?.emoji ?? '📁'} ${currentGroup?.name ?? '그룹'} · ${count}개의 링크`;
+    ? `나의 서랍 · ${count}개의 링크`
+    : `${currentGroup?.name ?? '그룹'} · ${count}개의 링크`;
 
   return (
     <View style={styles.container}>

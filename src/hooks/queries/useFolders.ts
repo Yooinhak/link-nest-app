@@ -35,7 +35,7 @@ export function useAllFoldersQuery(enabled = true) {
     queryFn: async () =>
       await supabase
         .from('folders')
-        .select('*, group:groups(id, name, emoji, type)')
+        .select('*, group:groups(id, name, color, type)')
         .order('created_at', { ascending: false }),
     select: (data) => data.data,
   });

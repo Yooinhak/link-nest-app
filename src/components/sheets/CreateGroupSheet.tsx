@@ -77,7 +77,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
       return;
     }
     createGroup.mutate(
-      { name: name.trim(), emoji: null, color: mood },
+      { name: name.trim(), color: mood },
       {
         onSuccess: (group) => {
           showToast('success', '그룹이 만들어졌어요');

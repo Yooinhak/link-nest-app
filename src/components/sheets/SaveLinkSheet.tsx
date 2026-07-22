@@ -5,7 +5,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery } from '@tanstack/react-query';
 
-import { colors, getFolderColor, typo } from '../../constants/theme';
+import { colors, getFolderColor, moods, resolveMoodKey, typo } from '../../constants/theme';
 import { useGroup } from '../../contexts/GroupContext';
 import { useAllFoldersQuery, useCreatePost } from '../../hooks/queries';
 import { readClipboardUrl } from '../../utils/clipboard';
@@ -17,7 +17,7 @@ import { isValidUrl } from '../../utils/validateUrl';
 import BottomSheet from '../BottomSheet';
 import Button from '../Button';
 import FaviconBadge from '../FaviconBadge';
-import { CheckIcon, ChevronDownIcon, ChevronRightIcon, FolderIcon, LockIcon, XIcon } from '../icons';
+import { CheckIcon, ChevronDownIcon, ChevronRightIcon, FolderIcon, HomeIcon, LockIcon, XIcon } from '../icons';
 import Input from '../Input';
 import Skeleton from '../Skeleton';
 import { useToast } from '../Toast';
@@ -46,7 +46,7 @@ type AnyFolder = {
   id: number;
   name: string;
   color: string | null;
-  group: { id: string; name: string; emoji: string | null; type: string } | null;
+  group: { id: string; name: string; color: string | null; type: string } | null;
 };
 
 function domainOf(url: string): string {
@@ -99,12 +99,12 @@ export default function SaveLinkSheet({ visible, onClose, initialUrl = null }: S
 
   const sections = useMemo(() => {
     const list = (allFolders ?? []) as unknown as AnyFolder[];
-    const byGroup = new Map<string, { name: string; emoji: string | null; type: string; folders: AnyFolder[] }>();
+    const byGroup = new Map<string, { name: string; color: string | null; type: string; folders: AnyFolder[] }>();
     for (const f of list) {
       if (!f.group) continue;
       const entry = byGroup.get(f.group.id) ?? {
         name: f.group.name,
-        emoji: f.group.emoji,
+        color: f.group.color,
         type: f.group.type,
         folders: [],
       };
@@ -254,8 +254,8 @@ export default function SaveLinkSheet({ visible, onClose, initialUrl = null }: S
                 subtitle={
                   recentFolder.group
                     ? recentFolder.group.type === 'personal'
-                      ? '🏠 나의 서랍'
-                      : `${recentFolder.group.emoji ?? '📁'} ${recentFolder.group.name}`
+                      ? '나의 서랍'
+                      : recentFolder.group.name
                     : undefined
                 }
                 selected={selectedId === recentFolder.id}
@@ -284,7 +284,12 @@ export default function SaveLinkSheet({ visible, onClose, initialUrl = null }: S
                   ) : (
                     <ChevronRightIcon size={15} color={colors.textFaint} strokeWidth={2.4} />
                   )}
-                  <Text style={styles.sectionEmoji}>{section.type === 'personal' ? '🏠' : (section.emoji ?? '📁')}</Text>
+                  {section.type === 'personal' ? (
+                    <HomeIcon size={13} color={colors.primaryDeep} strokeWidth={2.2} />
+                  ) : (
+                    // 그룹은 무드 점으로 식별 (이모지 폐지)
+                    <View style={[styles.sectionDot, { backgroundColor: moods[resolveMoodKey(section.color)].accent }]} />
+                  )}
                   <Text style={styles.sectionName}>{label}</Text>
                   {section.viewer && (
                     <View style={styles.viewerBadge}>
@@ -422,7 +427,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingVertical: 8,
   },
-  sectionEmoji: { fontSize: 13 },
+  sectionDot: { width: 9, height: 9, borderRadius: 5 },
   sectionName: { fontSize: 12, fontFamily: 'LINESeedKR-Bold', color: colors.textMuted },
   sectionCount: {
     marginLeft: 'auto',

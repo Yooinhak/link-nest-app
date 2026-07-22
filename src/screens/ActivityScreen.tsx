@@ -77,7 +77,7 @@ function ActivityRow({ item, onPress }: { item: ActivityFeedItem; onPress: () =>
       <View style={styles.rowBody}>
         <Text style={styles.rowText}>
           <Text style={styles.rowName}>{name}</Text>
-          {`님이 ${item.groupEmoji ?? '📁'} ${item.folderName}에 추가 · `}
+          {`님이 ${item.folderName}에 추가 · `}
           <Text style={styles.rowTime}>{relativeTime(item.createdAt)}</Text>
         </Text>
         <View style={styles.linkCard}>

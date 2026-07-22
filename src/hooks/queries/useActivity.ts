@@ -65,7 +65,8 @@ export type ActivityFeedItem = {
   folderEmoji: string | null;
   groupId: string;
   groupName: string;
-  groupEmoji: string | null;
+  /** 그룹 무드 키 (resolveMoodKey 로 해석) */
+  groupColor: string | null;
 };
 
 type FeedRow = {
@@ -80,7 +81,7 @@ type FeedRow = {
     color: string | null;
     emoji: string | null;
     group_id: string;
-    group: { id: string; name: string; emoji: string | null; type: string } | null;
+    group: { id: string; name: string; color: string | null; type: string } | null;
   } | null;
 };
 
@@ -97,7 +98,7 @@ export function useActivityFeedQuery(enabled = true) {
       const { data, error } = await supabase
         .from('posts')
         .select(
-          'id, url, description, created_at, user_id, folder:folders(id, name, color, emoji, group_id, group:groups(id, name, emoji, type))',
+          'id, url, description, created_at, user_id, folder:folders(id, name, color, emoji, group_id, group:groups(id, name, color, type))',
         )
         .order('created_at', { ascending: false })
         .limit(50);
@@ -130,7 +131,7 @@ export function useActivityFeedQuery(enabled = true) {
         folderEmoji: r.folder!.emoji,
         groupId: r.folder!.group!.id,
         groupName: r.folder!.group!.name,
-        groupEmoji: r.folder!.group!.emoji,
+        groupColor: r.folder!.group!.color,
       }));
     },
   });

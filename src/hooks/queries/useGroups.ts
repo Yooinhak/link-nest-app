@@ -11,7 +11,7 @@ export type GroupRole = 'owner' | 'editor' | 'viewer';
 export interface GroupSummary {
   id: string;
   name: string;
-  emoji: string | null;
+  /** 무드 키 저장소 (레거시 폴더색·null 은 resolveMoodKey 가 sunset 으로 폴백) */
   color: string | null;
   type: 'personal' | 'shared';
   createdAt: string;
@@ -31,7 +31,6 @@ export interface GroupMember {
 export interface InvitePreview {
   valid: boolean;
   group_name?: string;
-  group_emoji?: string | null;
   /** 그룹 무드 키 (preview_invite 가 아직 안 내려주면 undefined → sunset 폴백) */
   group_color?: string | null;
   role?: GroupRole;
@@ -54,7 +53,7 @@ export function useMyGroupsQuery(enabled = true) {
 
       const { data, error } = await supabase
         .from('group_members')
-        .select('role, joined_at, group:groups(id, name, emoji, color, type, created_at, members:group_members(count))')
+        .select('role, joined_at, group:groups(id, name, color, type, created_at, members:group_members(count))')
         .eq('user_id', uid);
       if (error) throw error;
 
@@ -66,7 +65,6 @@ export function useMyGroupsQuery(enabled = true) {
           return {
             id: g.id,
             name: g.name,
-            emoji: g.emoji,
             color: g.color,
             type: (g.type === 'personal' ? 'personal' : 'shared') as GroupSummary['type'],
             createdAt: g.created_at,
@@ -216,7 +214,7 @@ export function useCreateGroup() {
   const { showToast } = useToast();
 
   return useMutation({
-    mutationFn: async (params: { name: string; emoji: string | null; color: string }) => {
+    mutationFn: async (params: { name: string; color: string }) => {
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth.user?.id;
       if (!uid) throw new Error('AUTH_REQUIRED');
@@ -243,7 +241,7 @@ export function useUpdateGroup() {
   const { showToast } = useToast();
 
   return useMutation({
-    mutationFn: async (params: { id: string; name?: string; emoji?: string | null; color?: string }) => {
+    mutationFn: async (params: { id: string; name?: string; color?: string }) => {
       const { id, ...rest } = params;
       const { error } = await supabase.from('groups').update(rest).eq('id', id);
       if (error) throw error;
