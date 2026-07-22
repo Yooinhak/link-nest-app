@@ -333,6 +333,7 @@ export function useKickMember(groupId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [queryKeys.GROUP_MEMBERS, groupId] });
+      queryClient.invalidateQueries({ queryKey: [queryKeys.GROUP_MEMBERS_PREVIEW] });
       queryClient.invalidateQueries({ queryKey: [queryKeys.GROUP_LIST] });
       showToast('success', '멤버를 내보냈어요');
     },
@@ -388,6 +389,7 @@ export function useJoinGroup() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [queryKeys.GROUP_LIST] });
+      queryClient.invalidateQueries({ queryKey: [queryKeys.GROUP_MEMBERS_PREVIEW] });
     },
   });
 }
