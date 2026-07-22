@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useId } from 'react';
 
 import { StyleSheet } from 'react-native';
 
@@ -8,7 +8,6 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
  * 색유리 워시 — 칩/타일/밴드의 배경을 무드 그라디언트로 물들인다.
  * 부모 View 가 overflow:'hidden' + borderRadius 로 형태를 만든다.
  */
-let seq = 0;
 
 interface MoodWashProps {
   colors: readonly [string, string];
@@ -17,7 +16,7 @@ interface MoodWashProps {
 }
 
 export default function MoodWash({ colors: [from, to], opacity = 1 }: MoodWashProps) {
-  const id = useRef(`mood-wash-${++seq}`).current;
+  const id = `mood-wash-${useId()}`;
   return (
     <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
       <Defs>
