@@ -14,9 +14,10 @@ import { ChevronLeftIcon, PlusIcon, TrashIcon } from '../components/icons';
 import Input from '../components/Input';
 import MemberRow from '../components/MemberRow';
 import MoodSwatchRow from '../components/MoodSwatchRow';
+import MoodWash from '../components/MoodWash';
 import InviteSheet from '../components/sheets/InviteSheet';
 import { useToast } from '../components/Toast';
-import { colors, getGroupColor, glass, moods, resolveMoodKey, shadows, typo } from '../constants/theme';
+import { colors, glass, moods, resolveMoodKey, shadows, typo } from '../constants/theme';
 import { useGroup } from '../contexts/GroupContext';
 import {
   useActiveInviteQuery,
@@ -58,6 +59,8 @@ export default function MemberManageScreen() {
   const { groups, selectGroup, refetchGroups } = useGroup();
   const group = groups.find((g) => g.id === groupId) ?? null;
   const isOwner = group?.role === 'owner';
+  /** 관리 중인 그룹의 무드 — 스와치·타일이 같은 소스(group.color)를 본다 */
+  const groupMood = moods[resolveMoodKey(group?.color)];
 
   const { data: members = [] } = useGroupMembersQuery(groupId);
   const changeRole = useChangeMemberRole(groupId);
@@ -141,8 +144,9 @@ export default function MemberManageScreen() {
       >
         {/* 그룹 카드 */}
         <View style={styles.groupCard}>
-          <View style={[styles.groupTile, { backgroundColor: group ? getGroupColor(group.id).bg : mood.tile }]}>
-            <Text style={styles.groupEmoji}>{group?.emoji ?? '📁'}</Text>
+          {/* 그룹 타일 = 그 그룹의 공기 (해시색·이모지 폐지 — 스와치와 같은 group.color 소스) */}
+          <View style={styles.groupTile}>
+            <MoodWash colors={[groupMood.stops[0], groupMood.stops[2]]} />
           </View>
           <View style={styles.groupInfo}>
             <Text style={styles.groupName} numberOfLines={1}>
@@ -372,10 +376,8 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden', // MoodWash(absoluteFill) 클리핑
   },
-  groupEmoji: { fontSize: 21 },
   groupInfo: { flex: 1, minWidth: 0, gap: 2 },
   groupName: { fontSize: 16, fontFamily: 'LINESeedKR-Bold', color: colors.ink, letterSpacing: -0.32 },
   groupMeta: { fontSize: 12, fontFamily: 'LINESeedKR', color: colors.textFaint },
