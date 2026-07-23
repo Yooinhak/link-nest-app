@@ -10,7 +10,6 @@ import { lightTap } from '../utils/haptics';
 
 import { Avatar } from './AvatarStack';
 import { HomeIcon, PlusIcon } from './icons';
-import MoodWash from './MoodWash';
 
 /**
  * 채널 레일 — 블루 글래스 시안 02/06. "채널 레일 = 그룹 전환".
@@ -55,19 +54,18 @@ export default function GroupRail({ onCreateGroup }: GroupRailProps) {
         const preview = isPersonal ? undefined : previews?.[g.id];
         // 혼자 쓰는 그룹은 아바타 없음 — 아바타 자체가 "함께 쓰는 공간" 힌트
         const showAvatars = !isPersonal && !!preview && preview.count >= 2;
+        // 칩 배경 틴트 — 아바타 링도 같은 색을 써서 흰 덩어리 없이 겹침만 분리한다
+        const chipTint = `${wash[0]}${active ? 'F2' : '8C'}`;
 
         return (
           <TouchableOpacity
             key={g.id}
             style={[
               styles.chip,
+              { backgroundColor: chipTint },
               active
-                ? {
-                    backgroundColor: glass.bgStrong,
-                    borderColor: mood ? mood.accent : colors.primary,
-                    borderWidth: 1.5,
-                  }
-                : { backgroundColor: glass.bgSoft, borderColor: glass.borderSoft },
+                ? { borderColor: mood ? mood.accent : colors.primary, borderWidth: 1.5 }
+                : { borderColor: glass.borderSoft },
             ]}
             onPress={() => {
               lightTap();
@@ -78,8 +76,6 @@ export default function GroupRail({ onCreateGroup }: GroupRailProps) {
             accessibilityState={{ checked: active }}
             accessibilityLabel={`${label}${active ? ' (현재 공간)' : ''}`}
           >
-            {/* absoluteFill 워시 — 반드시 칩 내용보다 먼저 (뒤에 오면 내용을 덮는다) */}
-            <MoodWash colors={wash} opacity={active ? 0.9 : 0.5} />
             {isPersonal && <HomeIcon size={15} color={colors.primaryDeep} strokeWidth={2.2} />}
             <Text style={[styles.chipLabel, active ? styles.chipLabelActive : styles.chipLabelIdle]} numberOfLines={1}>
               {label}
@@ -87,7 +83,10 @@ export default function GroupRail({ onCreateGroup }: GroupRailProps) {
             {showAvatars && (
               <View style={styles.avatarRow}>
                 {preview.members.slice(0, 2).map((m, i) => (
-                  <View key={m.userId} style={[styles.avatarRing, i > 0 && styles.avatarOverlap]}>
+                  <View
+                    key={m.userId}
+                    style={[styles.avatarRing, { borderColor: chipTint }, i > 0 && styles.avatarOverlap]}
+                  >
                     <Avatar member={m} size={16} />
                   </View>
                 ))}
@@ -144,7 +143,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     borderRadius: 21,
     borderWidth: 1,
-    overflow: 'hidden', // MoodWash 를 칩 모양으로 클리핑
+    overflow: 'hidden',
   },
   chipIdlePlain: {
     backgroundColor: glass.bgSoft,
@@ -160,13 +159,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 2,
   },
-  // 흰 링·흰 배경 없음 — 무드 워시 위에서 흰 덩어리로 뭉쳐 보였다(실기기 확인).
-  // 겹치는 대신 작은 간격을 둬서 링 없이도 두 아바타가 분리된다.
+  // 링 색은 사용처에서 칩 틴트로 주입한다 — 흰 링을 쓰면 무드 배경 위에 흰 덩어리로 뭉친다.
+  // 칩과 같은 색이라 눈에 안 띄면서 겹친 두 아바타를 분리해준다.
   avatarRing: {
-    borderRadius: 8,
+    borderRadius: 9.5,
+    borderWidth: 1.5,
   },
   avatarOverlap: {
-    marginLeft: 3,
+    marginLeft: -5,
   },
   moreBadge: {
     width: 16,
