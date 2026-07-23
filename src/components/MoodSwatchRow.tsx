@@ -8,7 +8,7 @@ import { lightTap } from '../utils/haptics';
 import MoodWash from './MoodWash';
 
 /**
- * 공기(무드) 스와치 행 — 그룹 생성/수정 공용. 가로 스크롤(무드 추가 확장 대비).
+ * 무드 스와치 행 — 그룹 생성/수정 공용. 가로 스크롤(무드 추가 확장 대비).
  * 46×46 r16 타일 = 무드 미니 그라디언트 + 우상단 오브 힌트 점 + 캡션.
  */
 interface MoodSwatchRowProps {
@@ -40,7 +40,7 @@ export default function MoodSwatchRow({ value, onChange, suggested = null }: Moo
             activeOpacity={0.7}
             accessibilityRole="radio"
             accessibilityState={{ checked: active }}
-            accessibilityLabel={`${m.label} 공기`}
+            accessibilityLabel={`${m.label} 무드`}
           >
             <View style={[styles.tile, active && { borderColor: m.accent, borderWidth: 2.5 }]}>
               <MoodWash colors={[m.stops[0], m.stops[2]]} />

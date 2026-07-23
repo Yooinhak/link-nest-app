@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { suggestMood } from '../../constants/moodData';
-import { colors, MoodKey, moods, resolveMoodKey, typo } from '../../constants/theme';
+import { colors, MoodKey, resolveMoodKey, typo } from '../../constants/theme';
 import { useGroup } from '../../contexts/GroupContext';
 import { useCreateGroup } from '../../hooks/queries/useGroups';
 import BottomSheet from '../BottomSheet';
@@ -11,12 +11,11 @@ import Button from '../Button';
 import { UsersIcon } from '../icons';
 import Input from '../Input';
 import MoodSwatchRow from '../MoodSwatchRow';
-import MoodWash from '../MoodWash';
 import { useToast } from '../Toast';
 
 /**
- * 새 그룹 만들기 시트 — 무드(공기) 아이덴티티.
- * 이름 타이핑 → 무드 자동 추천(수동 개입 시 중단) → 미리보기 밴드로 완성될 칩을 보여준다.
+ * 새 그룹 만들기 시트 — 무드 아이덴티티.
+ * 이름 타이핑 → 무드 자동 추천(수동 개입 시 중단). 결정은 이름 하나면 충분하다.
  * 이모지 프리셋·직접입력은 폐지(설계: group-mood-air.design.md §3).
  */
 
@@ -91,7 +90,6 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
     );
   };
 
-  const m = moods[mood];
 
   return (
     <BottomSheet
@@ -103,19 +101,8 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
       <Text style={styles.capsLabel}>NAME</Text>
       <Input placeholder="그룹 이름 (예: 제주 여행)" value={name} onChangeText={setName} maxLength={30} />
 
-      <Text style={styles.capsLabel}>공기</Text>
+      <Text style={styles.capsLabel}>무드</Text>
       <MoodSwatchRow value={mood} onChange={handlePickMood} suggested={suggested} />
-
-      {/* 미리보기 — 완성될 레일 칩을 실제 공기 위에 렌더 */}
-      <View style={styles.previewBand}>
-        <MoodWash colors={[m.stops[0], m.stops[2]]} />
-        <View style={[styles.previewChip, { borderColor: m.accent }]}>
-          <MoodWash colors={m.chipWash} opacity={0.9} />
-          <Text style={styles.previewChipText} numberOfLines={1}>
-            {name.trim() || '그룹 이름'}
-          </Text>
-        </View>
-      </View>
 
       <View style={styles.infoBox}>
         <UsersIcon size={15} color={colors.primary} />
@@ -136,25 +123,6 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
 
 const styles = StyleSheet.create({
   capsLabel: { ...typo.sectionLabel, marginTop: 18, marginBottom: 9 },
-  previewBand: {
-    height: 64,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginTop: 16,
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  previewChip: {
-    alignSelf: 'flex-start',
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 1.5,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-  },
-  previewChipText: { fontSize: 13, fontFamily: 'LINESeedKR-Bold', color: colors.ink, maxWidth: 180 },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'center',

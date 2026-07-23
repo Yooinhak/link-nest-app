@@ -7,6 +7,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AlertDialog from '../components/AlertDialog';
+import { Avatar } from '../components/AvatarStack';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import GlassBackground from '../components/GlassBackground';
@@ -14,7 +15,6 @@ import { ChevronLeftIcon, PlusIcon, TrashIcon } from '../components/icons';
 import Input from '../components/Input';
 import MemberRow from '../components/MemberRow';
 import MoodSwatchRow from '../components/MoodSwatchRow';
-import MoodWash from '../components/MoodWash';
 import InviteSheet from '../components/sheets/InviteSheet';
 import { useToast } from '../components/Toast';
 import { colors, glass, moods, resolveMoodKey, shadows, typo } from '../constants/theme';
@@ -142,18 +142,21 @@ export default function MemberManageScreen() {
         contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* 그룹 카드 */}
+        {/* 그룹 카드 — 이 화면에서 가장 궁금한 건 "누가 있나"라 얼굴을 먼저 보여준다 */}
         <View style={styles.groupCard}>
-          {/* 그룹 타일 = 그 그룹의 공기 (해시색·이모지 폐지 — 스와치와 같은 group.color 소스) */}
-          <View style={styles.groupTile}>
-            <MoodWash colors={[groupMood.stops[0], groupMood.stops[2]]} />
-          </View>
-          <View style={styles.groupInfo}>
-            <Text style={styles.groupName} numberOfLines={1}>
-              {group?.name ?? '그룹'}
-            </Text>
-            <Text style={styles.groupMeta}>멤버 {members.length}명</Text>
-          </View>
+          {members.length > 0 && (
+            <View style={styles.faceRow}>
+              {members.slice(0, 4).map((m, i) => (
+                <View key={m.userId} style={[styles.faceRing, i > 0 && styles.faceOverlap]}>
+                  <Avatar member={m} size={30} />
+                </View>
+              ))}
+            </View>
+          )}
+          <Text style={styles.groupName} numberOfLines={1}>
+            {group?.name ?? '그룹'}
+          </Text>
+          <Text style={[styles.groupMeta, { color: groupMood.metaText }]}>멤버 {members.length}명</Text>
         </View>
 
         {/* 초대 링크 박스 (시안 08) */}
@@ -172,10 +175,10 @@ export default function MemberManageScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 공기(무드) 변경 — owner 전용. 저장하면 GROUP_LIST 무효화 → 레일 칩·배경이 따라 바뀐다 */}
+        {/* 무드 변경 — owner 전용. 저장하면 GROUP_LIST 무효화 → 레일 칩·배경이 따라 바뀐다 */}
         {isOwner && (
           <View style={styles.moodSection}>
-            <Text style={[styles.capsLabel, styles.moodLabel, { color: mood.metaText }]}>공기</Text>
+            <Text style={[styles.capsLabel, styles.moodLabel, { color: mood.metaText }]}>무드</Text>
             <MoodSwatchRow
               value={resolveMoodKey(group?.color)}
               onChange={(key) => updateGroup.mutate({ id: groupId, color: key })}
@@ -361,26 +364,21 @@ const styles = StyleSheet.create({
   },
   scroll: { paddingHorizontal: 20, paddingTop: 16 },
   groupCard: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
     backgroundColor: glass.bg,
     borderWidth: 1,
     borderColor: glass.border,
     borderRadius: 18,
-    padding: 13,
+    paddingVertical: 14,
+    paddingHorizontal: 13,
     ...shadows.warmCard,
   },
-  // backgroundColor 는 사용처에서 주입 (그룹 색 → 없으면 현재 무드 타일)
-  groupTile: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    overflow: 'hidden', // MoodWash(absoluteFill) 클리핑
-  },
-  groupInfo: { flex: 1, minWidth: 0, gap: 2 },
-  groupName: { fontSize: 16, fontFamily: 'LINESeedKR-Bold', color: colors.ink, letterSpacing: -0.32 },
-  groupMeta: { fontSize: 12, fontFamily: 'LINESeedKR', color: colors.textFaint },
+  faceRow: { flexDirection: 'row', marginBottom: 8 },
+  faceRing: { borderRadius: 17, borderWidth: 2, borderColor: colors.white },
+  faceOverlap: { marginLeft: -9 },
+  groupName: { fontSize: 17, fontFamily: 'LINESeedKR-Bold', color: colors.ink, letterSpacing: -0.34 },
+  // color 는 사용처에서 무드로 주입
+  groupMeta: { fontSize: 12, fontFamily: 'LINESeedKR', marginTop: 3 },
   linkBox: {
     flexDirection: 'row',
     alignItems: 'center',

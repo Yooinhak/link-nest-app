@@ -19,6 +19,7 @@ import Button from '../Button';
 import FaviconBadge from '../FaviconBadge';
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon, FolderIcon, HomeIcon, LockIcon, XIcon } from '../icons';
 import Input from '../Input';
+import MoodWash from '../MoodWash';
 import Skeleton from '../Skeleton';
 import { useToast } from '../Toast';
 
@@ -287,8 +288,15 @@ export default function SaveLinkSheet({ visible, onClose, initialUrl = null }: S
                   {section.type === 'personal' ? (
                     <HomeIcon size={13} color={colors.primaryDeep} strokeWidth={2.2} />
                   ) : (
-                    // 그룹은 무드 점으로 식별 (이모지 폐지)
-                    <View style={[styles.sectionDot, { backgroundColor: moods[resolveMoodKey(section.color)].accent }]} />
+                    // 그룹은 무드 세로 바로 식별 (이모지 폐지)
+                    <View style={styles.sectionBarWrap}>
+                      <MoodWash
+                        colors={[
+                          moods[resolveMoodKey(section.color)].illust.pastel,
+                          moods[resolveMoodKey(section.color)].accent,
+                        ]}
+                      />
+                    </View>
                   )}
                   <Text style={styles.sectionName}>{label}</Text>
                   {section.viewer && (
@@ -427,7 +435,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingVertical: 8,
   },
-  sectionDot: { width: 9, height: 9, borderRadius: 5 },
+  sectionBarWrap: { width: 3, height: 16, borderRadius: 2, overflow: 'hidden' },
   sectionName: { fontSize: 12, fontFamily: 'LINESeedKR-Bold', color: colors.textMuted },
   sectionCount: {
     marginLeft: 'auto',

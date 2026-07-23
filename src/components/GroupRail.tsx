@@ -160,11 +160,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 2,
   },
+  // 링은 테두리만 — 흰 배경을 깔면 무드 워시 위에 흰 알약이 얹힌 것처럼 보인다
   avatarRing: {
-    borderRadius: 10,
+    borderRadius: 9.5,
     borderWidth: 1.5,
     borderColor: colors.white,
-    backgroundColor: colors.white,
   },
   avatarOverlap: {
     marginLeft: -5,
