@@ -160,14 +160,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 2,
   },
-  // 링은 테두리만 — 흰 배경을 깔면 무드 워시 위에 흰 알약이 얹힌 것처럼 보인다
+  // 흰 링·흰 배경 없음 — 무드 워시 위에서 흰 덩어리로 뭉쳐 보였다(실기기 확인).
+  // 겹치는 대신 작은 간격을 둬서 링 없이도 두 아바타가 분리된다.
   avatarRing: {
-    borderRadius: 9.5,
-    borderWidth: 1.5,
-    borderColor: colors.white,
+    borderRadius: 8,
   },
   avatarOverlap: {
-    marginLeft: -5,
+    marginLeft: 3,
   },
   moreBadge: {
     width: 16,
