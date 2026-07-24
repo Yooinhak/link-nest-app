@@ -104,7 +104,9 @@ export function useDeletePost(folderId: string) {
 export function useDeferredDeletePost(folderId: string) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ⚠️ id 별 타이머 — 단일 ref 를 쓰면 6초 안에 두 개를 지울 때 첫 번째 타이머가 취소되어
+  //    그 항목이 DB 에서 영영 삭제되지 않고 invalidate 시점에 되살아난다(2026-07-23 감사).
+  const timersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
 
   const execute = useCallback((id: number) => {
     const queryKey = [queryKeys.POST_LIST, folderId];
@@ -113,7 +115,8 @@ export function useDeferredDeletePost(folderId: string) {
     const previous = queryClient.getQueryData(queryKey);
     queryClient.setQueryData<RowWithId[]>(queryKey, (old) => old?.filter((p) => p.id !== id));
 
-    if (timerRef.current) clearTimeout(timerRef.current);
+    const running = timersRef.current.get(id);
+    if (running) clearTimeout(running);
 
     let undone = false;
 
@@ -124,7 +127,9 @@ export function useDeferredDeletePost(folderId: string) {
         label: '실행 취소',
         onPress: () => {
           undone = true;
-          if (timerRef.current) clearTimeout(timerRef.current);
+          const t = timersRef.current.get(id);
+          if (t) clearTimeout(t);
+          timersRef.current.delete(id);
           if (previous) {
             queryClient.setQueryData(queryKey, previous);
           }
@@ -134,7 +139,7 @@ export function useDeferredDeletePost(folderId: string) {
     });
 
     // 3. 6초 후 실제 삭제
-    timerRef.current = setTimeout(() => {
+    const timer = setTimeout(() => {
       if (!undone) {
         supabase.from('posts').delete().eq('id', id).then(({ error }) => {
           if (error) {
@@ -147,8 +152,9 @@ export function useDeferredDeletePost(folderId: string) {
           queryClient.invalidateQueries({ queryKey: [queryKeys.FOLDER_LIST] });
         });
       }
-      timerRef.current = null;
+      timersRef.current.delete(id);
     }, 6000);
+    timersRef.current.set(id, timer);
   }, [queryClient, showToast, folderId]);
 
   return { execute };
