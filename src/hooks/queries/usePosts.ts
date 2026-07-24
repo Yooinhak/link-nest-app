@@ -10,11 +10,18 @@ import { supabase } from '../../utils/supabase/client';
 export function usePostsQuery(folderId: string) {
   return useQuery({
     queryKey: [queryKeys.POST_LIST, folderId],
-    queryFn: async () =>
-      await supabase.from('posts').select().eq('folder_id', Number(folderId)),
-    select: (data) => data.data,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('posts').select().eq('folder_id', Number(folderId));
+      // 에러를 던져야 retry·isError 가 동작한다 (useFolders 와 같은 계약).
+      // 던지지 않으면 실패가 'success + 빈 목록'으로 위장된다.
+      if (error) throw error;
+      return data ?? [];
+    },
   });
 }
+
+/** 목록 캐시에서 id 로 걸러낼 때만 쓰는 최소 구조 (any 회피용) */
+type RowWithId = { id: number };
 
 // --- Mutations ---
 export function useCreatePost() {
@@ -71,10 +78,7 @@ export function useDeletePost(folderId: string) {
       const queryKey = [queryKeys.POST_LIST, folderId];
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData(queryKey);
-      queryClient.setQueryData(queryKey, (old: any) => {
-        if (!old?.data) return old;
-        return { ...old, data: old.data.filter((p: any) => p.id !== id) };
-      });
+      queryClient.setQueryData<RowWithId[]>(queryKey, (old) => old?.filter((p) => p.id !== id));
       return { previous };
     },
     onError: (_err, _id, context) => {
@@ -107,10 +111,7 @@ export function useDeferredDeletePost(folderId: string) {
 
     // 1. 낙관적으로 캐시에서 제거
     const previous = queryClient.getQueryData(queryKey);
-    queryClient.setQueryData(queryKey, (old: any) => {
-      if (!old?.data) return old;
-      return { ...old, data: old.data.filter((p: any) => p.id !== id) };
-    });
+    queryClient.setQueryData<RowWithId[]>(queryKey, (old) => old?.filter((p) => p.id !== id));
 
     if (timerRef.current) clearTimeout(timerRef.current);
 

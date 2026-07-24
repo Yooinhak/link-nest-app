@@ -9,18 +9,26 @@ import { supabase } from '../../utils/supabase/client';
 // ⚠️ 그룹 모델 전환 (001_groups_sharing.sql): 폴더는 항상 그룹에 소속.
 // 조회/생성은 groupId 필수, 캐시 키는 [FOLDER_LIST, groupId].
 
+/** 목록 캐시에서 id 로 걸러낼 때만 쓰는 최소 구조 (any 회피용) */
+type RowWithId = { id: number };
+
 // --- Query ---
 export function useFoldersQuery(groupId: string | null) {
   return useQuery({
     queryKey: [queryKeys.FOLDER_LIST, groupId],
     enabled: !!groupId,
-    queryFn: async () =>
-      await supabase
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('folders')
         .select('*, posts(count)')
         .eq('group_id', groupId!)
-        .order('created_at', { ascending: false }),
-    select: (data) => data.data,
+        .order('created_at', { ascending: false });
+      // Supabase 는 RLS 거부·네트워크 실패에도 reject 하지 않고 { data:null, error } 로
+      // resolve 한다. 던지지 않으면 실패가 'success + 빈 목록'으로 위장되어
+      // retry·isError 가 통째로 죽는다 (useGroups 와 같은 계약).
+      if (error) throw error;
+      return data ?? [];
+    },
   });
 }
 
@@ -32,12 +40,14 @@ export function useAllFoldersQuery(enabled = true) {
   return useQuery({
     queryKey: [queryKeys.FOLDER_LIST, 'all'],
     enabled,
-    queryFn: async () =>
-      await supabase
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('folders')
         .select('*, group:groups(id, name, color, type)')
-        .order('created_at', { ascending: false }),
-    select: (data) => data.data,
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
   });
 }
 
@@ -96,10 +106,7 @@ export function useDeleteFolder(groupId: string | null) {
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: listKey });
       const previous = queryClient.getQueryData(listKey);
-      queryClient.setQueryData(listKey, (old: any) => {
-        if (!old?.data) return old;
-        return { ...old, data: old.data.filter((f: any) => f.id !== id) };
-      });
+      queryClient.setQueryData<RowWithId[]>(listKey, (old) => old?.filter((f) => f.id !== id));
       return { previous };
     },
     onError: (_err, _id, context) => {
@@ -133,10 +140,7 @@ export function useDeferredDeleteFolder(groupId: string | null) {
 
       // 1. 낙관적으로 캐시에서 제거
       const previous = queryClient.getQueryData(listKey);
-      queryClient.setQueryData(listKey, (old: any) => {
-        if (!old?.data) return old;
-        return { ...old, data: old.data.filter((f: any) => f.id !== id) };
-      });
+      queryClient.setQueryData<RowWithId[]>(listKey, (old) => old?.filter((f) => f.id !== id));
 
       // 기존 타이머가 있으면 정리
       if (timerRef.current) clearTimeout(timerRef.current);
