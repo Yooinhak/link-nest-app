@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius } from '../constants/theme';
 import { successTap, warningTap } from '../utils/haptics';
+import { registerErrorToast } from '../utils/toastBridge';
 
 import { CheckIcon, XIcon } from './icons';
 
@@ -110,6 +111,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     else warningTap();
     setToasts((prev) => [...prev, { id: ++toastId, type, message, action: options?.action, duration: options?.duration }]);
   }, []);
+
+  // React 바깥(queryClient onError 등)에서도 에러를 띄울 수 있게 브리지에 등록
+  useEffect(() => {
+    registerErrorToast((message) => showToast('error', message));
+    return () => registerErrorToast(null);
+  }, [showToast]);
 
   const handleDone = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
