@@ -387,11 +387,14 @@ export default function FolderDetailScreen() {
                 type="link"
                 title="아직 링크가 없어요"
                 subtitle={
-                  !isPersonal
-                    ? '인스타에서 본 맛집, 유튜브에서 본 카페 —\n첫 링크를 함께 모아보세요'
-                    : '아래 ＋ 버튼으로 첫 링크를 저장해보세요'
+                  isPersonal
+                    ? '인스타에서 본 맛집, 유튜브에서 본 카페 —\n첫 링크를 모아보세요'
+                    : '친구와 함께 첫 링크를 모아보세요'
                 }
                 mood={mood?.key}
+                // 킬러기능(공유하기로 저장) 은 앱 안에서 발견될 길이 없어 여기서 알린다.
+                // 저장 권한이 없는 viewer 에겐 CTA 와 같은 조건으로 숨긴다.
+                hint={canEdit ? '유튜브·인스타에서 공유하기 → 모아링을 눌러도 저장돼요' : undefined}
               >
                 {canEdit && (
                   <Button

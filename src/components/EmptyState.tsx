@@ -30,6 +30,11 @@ interface EmptyStateProps {
   mood?: MoodKey;
   /** CTA 버튼 등 하단 액션 (선택) */
   children?: React.ReactNode;
+  /**
+   * CTA 아래 놓이는 보조 안내 한 줄 (선택).
+   * CTA 가 1순위 행동이면 hint 는 "이런 방법도 있어요" 급 2순위 정보 — 그래서 더 작고 흐리다.
+   */
+  hint?: string;
 }
 
 /** 일러스트 팔레트 — 4단 톤 (딥 스트로크 / 프라이머리 / 파스텔 / 틴트) */
@@ -187,7 +192,7 @@ const ILLUST: Record<EmptyStateProps['type'], (props: { p: Palette }) => React.J
   search: SearchIllust,
 };
 
-export default function EmptyState({ type, title, subtitle, mood, children }: EmptyStateProps) {
+export default function EmptyState({ type, title, subtitle, mood, children, hint }: EmptyStateProps) {
   // key 는 SVG def id 접두사 — 무드마다 달라야 같은 화면에 두 팔레트가 섞여도 안 겹친다
   const palette: Palette = mood ? { key: mood, ...moods[mood].illust } : INDIGO;
   const Illust = ILLUST[type];
@@ -201,6 +206,7 @@ export default function EmptyState({ type, title, subtitle, mood, children }: Em
       <Text style={styles.title}>{title}</Text>
       <Text style={[styles.subtitle, { color: subColor }]}>{subtitle}</Text>
       {children && <View style={styles.actions}>{children}</View>}
+      {hint && <Text style={[styles.hint, { color: subColor }]}>{hint}</Text>}
     </View>
   );
 }
@@ -234,5 +240,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 24,
     gap: 4,
+  },
+  // subtitle 보다 한 단계 작고 흐리게 — CTA 아래 2순위 정보라 시선을 먼저 끌면 안 된다
+  hint: {
+    fontSize: 12,
+    fontFamily: 'LINESeedKR',
+    textAlign: 'center',
+    lineHeight: 19,
+    marginTop: 16,
+    opacity: 0.75,
   },
 });
